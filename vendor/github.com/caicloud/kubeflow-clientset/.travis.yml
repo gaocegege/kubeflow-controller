@@ -1,0 +1,10 @@
+language: go
+
+go:
+  - 1.8
+  - 1.9
+
+go_import_path: github.com/caicloud/kubeflow-clientset
+
+script:
+  - .ci/verify.sh

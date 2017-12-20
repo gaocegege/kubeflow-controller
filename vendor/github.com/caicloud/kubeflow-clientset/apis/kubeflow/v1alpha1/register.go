@@ -22,11 +22,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// GroupName is the group name use in this package
-const GroupName = "kubeflow.caicloud.io"
+const (
+	// GroupName is the group name use in this package.
+	GroupName = "kubeflow.caicloud.io"
+	// TFJobResourceKind is the kind name.
+	TFJobResourceKind = "TFJob"
+	// GroupVersion is the version.
+	GroupVersion = "v1alpha1"
+)
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: GroupVersion}
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
