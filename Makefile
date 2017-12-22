@@ -16,11 +16,17 @@ GitSHA := $(shell git rev-parse --short HEAD)
 # Golang standard bin directory.
 BIN_DIR := $(GOPATH)/bin
 
+# Golang packages except vendor.
+PACKAGES := $(shell go list ./... | grep -v /vendor/ )
+
 build:
 	go build -i -v -o $(OUTPUT_DIR)/kubeflow-controller \
 	  -ldflags "-s -w -X $(ROOT)/version.Version=$(VERSION) \
 	            -X $(ROOT)/version.GitSHA=$(GitSHA)" \
 	  $(CMD_DIR) \
+
+test:
+	go test $(PACKAGES)
 
 clean:
 	-rm -vrf ${OUTPUT_DIR}

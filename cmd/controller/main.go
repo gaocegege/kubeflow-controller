@@ -6,16 +6,15 @@ import (
 	"runtime"
 	"time"
 
+	clientset "github.com/caicloud/kubeflow-clientset/clientset"
+	kubeflowinformers "github.com/caicloud/kubeflow-clientset/informers"
 	"github.com/coreos/etcd/version"
 	"github.com/golang/glog"
-
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubeinformers "k8s.io/kubernetes/pkg/client/informers/informers_generated/externalversions"
 
-	clientset "github.com/caicloud/kubeflow-clientset/clientset/versioned"
-	kubeflowinformers "github.com/caicloud/kubeflow-clientset/informers/externalversions"
-	controller "github.com/caicloud/kubeflow-controller/pkg/controller"
+	"github.com/caicloud/kubeflow-controller/pkg/controller"
 	"github.com/caicloud/kubeflow-controller/pkg/util/signals"
 )
 

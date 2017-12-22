@@ -1,0 +1,5 @@
+vendor/* linguist-vendored=true
+informers/* linguist-generated=true
+listers/* linguist-generated=true
+clientset/* linguist-generated=true
+apis/kubeflow/v1alpha1/zz_generated.deepcopy.go linguist-generated=true

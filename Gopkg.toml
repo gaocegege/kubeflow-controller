@@ -1,29 +1,20 @@
-
-# Gopkg.toml example
-#
 # Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
 # for detailed Gopkg.toml documentation.
-#
-# required = ["github.com/user/thing/cmd/thing"]
-# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
-#
-# [[constraint]]
-#   name = "github.com/user/project"
-#   version = "1.0.0"
-#
-# [[constraint]]
-#   name = "github.com/user/project2"
-#   branch = "dev"
-#   source = "github.com/myfork/project2"
-#
-# [[override]]
-#  name = "github.com/x/y"
-#  version = "2.4.0"
 
 
 [[constraint]]
-  branch = "master"
+  branch = "gen"
   name = "github.com/caicloud/kubeflow-clientset"
+  source = "https://github.com/gaocegege-caicloud/kubeflow-clientset.git"
+
+[[override]]
+  name = "k8s.io/client-go"
+  version = "v4.0.0"
+
+# See https://github.com/kubernetes/client-go/blob/d92e8497f71b7b4e0494e5bd204b48d34bd6f254/Godeps/Godeps.json#L231
+[[override]]
+  revision = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74"
+  name = "github.com/ugorji/go"
 
 [[constraint]]
   name = "github.com/coreos/etcd"
@@ -34,13 +25,25 @@
   name = "github.com/golang/glog"
 
 [[constraint]]
-  branch = "release-1.8"
+  branch = "release-1.7"
   name = "k8s.io/api"
 
 [[constraint]]
-  branch = "release-1.8"
+  branch = "release-1.7"
   name = "k8s.io/apimachinery"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "5.0.1"
+  version = "v4.0.0"
+
+[[constraint]]
+  name = "k8s.io/kubernetes"
+  version = "v1.7.11"
+
+[[override]]
+  name = "github.com/docker/distribution"
+  revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c"
+
+[[override]]
+  name = "k8s.io/apiserver"
+  branch = "release-1.7"
