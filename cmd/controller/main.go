@@ -8,7 +8,6 @@ import (
 
 	clientset "github.com/caicloud/kubeflow-clientset/clientset/versioned"
 	kubeflowinformers "github.com/caicloud/kubeflow-clientset/informers/externalversions"
-	"github.com/coreos/etcd/version"
 	"github.com/golang/glog"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/caicloud/kubeflow-controller/pkg/controller"
 	"github.com/caicloud/kubeflow-controller/pkg/util/signals"
+	"github.com/caicloud/kubeflow-controller/version"
 )
 
 var (
@@ -60,16 +60,16 @@ func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.BoolVar(&printVersion, "version", false, "Show version and quit")
-
-	glog.Infof("kubeflow-controller Version: %v", version.Version)
-	glog.Infof("Git SHA: %s", version.GitSHA)
-	glog.Infof("Go Version: %s", runtime.Version())
-	glog.Infof("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
 func main() {
 	// This is to solve https://github.com/golang/glog/commit/65d674618f712aa808a7d0104131b9206fc3d5ad, which is definitely NOT cool.
 	flag.Parse()
+
+	glog.Infof("kubeflow-controller Version: %v", version.Version)
+	glog.Infof("Git SHA: %s", version.GitSHA)
+	glog.Infof("Go Version: %s", runtime.Version())
+	glog.Infof("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
 	if printVersion {
 		os.Exit(0)
 	}
