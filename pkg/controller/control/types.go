@@ -11,9 +11,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package version
+package control
 
-var (
-	Version = "Not provided."
-	GitSHA  = "Not provided."
+// Reasons for events
+const (
+	FailedCreateServiceReason        = "FailedCreate"
+	SuccessfulCreateServiceReason    = "SuccessfulCreate"
+	FailedDeleteServiceReason        = "FailedDelete"
+	SuccessfulDeleteServiceReason    = "SuccessfulDelete"
+	FailedCreateReplicaSetReason     = "FailedCreate"
+	SuccessfulCreateReplicaSetReason = "SuccessfulCreate"
+	FailedDeleteReplicaSetReason     = "FailedDelete"
+	SuccessfulDeleteReplicaSetReason = "SuccessfulDelete"
 )

@@ -3,9 +3,8 @@
 
 
 [[constraint]]
-  branch = "gen"
+  branch = "release-1.7"
   name = "github.com/caicloud/kubeflow-clientset"
-  source = "https://github.com/gaocegege-caicloud/kubeflow-clientset.git"
 
 [[override]]
   name = "k8s.io/client-go"

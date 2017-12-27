@@ -20,23 +20,10 @@
   version = "v8"
 
 [[projects]]
-  branch = "gen"
+  branch = "release-1.7"
   name = "github.com/caicloud/kubeflow-clientset"
   packages = ["apis/kubeflow/v1alpha1","clientset","clientset/scheme","clientset/typed/kubeflow/v1alpha1","informers","informers/kubeflow","informers/kubeflow/v1alpha1","listers/kubeflow/v1alpha1"]
-  revision = "b325dc679a38d4bcd6a5b7eca0b5423a102cf7e4"
-  source = "https://github.com/gaocegege-caicloud/kubeflow-clientset.git"
-
-[[projects]]
-  name = "github.com/coreos/etcd"
-  packages = ["version"]
-  revision = "1e1dbb23924672c6cd72c62ee0db2b45f778da71"
-  version = "v3.2.11"
-
-[[projects]]
-  name = "github.com/coreos/go-semver"
-  packages = ["semver"]
-  revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6"
-  version = "v0.2.0"
+  revision = "03752515393fa62ed2d98a33d44bd74635f6fa82"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -285,6 +272,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3e4b818ada6564a522b5e4bf0994f7a6ca807601f6409aeb25e47696f20a1004"
+  inputs-digest = "bfe205ab38bc47bd04b320168313a658759ededc1a902ecf3facd2a448331a16"
   solver-name = "gps-cdcl"
   solver-version = 1

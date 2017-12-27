@@ -11,9 +11,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package version
+package tensorflow
 
-var (
-	Version = "Not provided."
-	GitSHA  = "Not provided."
+import (
+	"fmt"
+
+	"k8s.io/kubernetes/pkg/api/v1"
 )
+
+// generateRuntimeID generates runtimeID.
+func generateRuntimeID() string {
+	return v1.SimpleNameGenerator.GenerateName("")
+}
+
+func generateName(name, typ, runtimeID string) string {
+	return fmt.Sprintf("%s-%s-%s", name, typ, runtimeID)
+}

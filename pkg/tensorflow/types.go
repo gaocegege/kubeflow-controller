@@ -11,9 +11,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package version
+package tensorflow
 
-var (
-	Version = "Not provided."
-	GitSHA  = "Not provided."
+type Job interface {
+	Action() Event
+}
+
+type Event struct {
+	Action ActionType
+	Number int
+}
+
+type ActionType string
+
+const (
+	ActionShouldAddPS     ActionType = "ShouldAddPS"
+	ActionShouldAddWorker ActionType = "ShouldAddWorker"
+	ActionShouldDelete    ActionType = "ShouldDelete"
+	ActionNothing         ActionType = "Nothing"
 )

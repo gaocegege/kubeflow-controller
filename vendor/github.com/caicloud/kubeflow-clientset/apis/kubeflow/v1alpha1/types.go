@@ -143,7 +143,7 @@ type TFJobCondition struct {
 // ConditionStatus is the type for condition status.
 type ConditionStatus string
 
-// TFJobConditionType define all kinds of types of TFJobStatus
+// TFJobConditionType defines all kinds of types of TFJobStatus
 type TFJobConditionType string
 
 const (
@@ -157,8 +157,10 @@ const (
 
 type TFReplicaStatus struct {
 	Type *TFReplicaType `json:"type"`
-	// State is the overall state of the TFReplica
+	// State is the overall state of the TFReplica.
 	State TFReplicaState `json:"state"`
+	// PodNames is the name of all pods.
+	PodNames []string `json:"podNames"`
 	// ReplicasStates provides the number of TFReplicas in each status.
 	TFReplicasStates map[TFReplicaState]int `json:"tfReplicasStates,omitempty"`
 }
