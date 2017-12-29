@@ -39,8 +39,8 @@ var (
 
 // HelperInterface is the interface for helper.
 type HelperInterface interface {
-	CreateLocal(tfJob *api.TFJob, template *v1.PodTemplateSpec) error
-	CreateDistributed(tfJob *api.TFJob, template *v1.PodTemplateSpec, service *v1.Service) error
+	CreateService(tfJob *api.TFJob, service *v1.Service) error
+	CreatePod(tfJob *api.TFJob, template *v1.PodTemplateSpec) error
 	GetPodsForTFJob(tfJob *api.TFJob, typ api.TFReplicaType) ([]*v1.Pod, error)
 	GetServicesForTFJob(tfJob *api.TFJob, typ api.TFReplicaType) ([]*v1.Service, error)
 }
@@ -67,26 +67,7 @@ func NewHelper(tfJobClientset clientset.KubeflowV1alpha1Interface, podLister kub
 	}
 }
 
-// CreateLocal creates a pod which is contolled by the tfjob.
-func (h *Helper) CreateLocal(tfJob *api.TFJob, template *v1.PodTemplateSpec) error {
-	if err := h.createPod(tfJob, template); err != nil {
-		return err
-	}
-	return nil
-}
-
-// CreateDistributed creates a pod and a service which are contolled by the tfjob.
-func (h *Helper) CreateDistributed(tfJob *api.TFJob, template *v1.PodTemplateSpec, service *v1.Service) error {
-	if err := h.createPod(tfJob, template); err != nil {
-		return err
-	}
-	if err := h.createService(tfJob, service); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (h *Helper) createService(tfJob *api.TFJob, service *v1.Service) error {
+func (h *Helper) CreateService(tfJob *api.TFJob, service *v1.Service) error {
 	err := h.serviceControl.CreateServicesWithControllerRef(
 		tfJob.Namespace, service, tfJob, newControllerRef(tfJob))
 	if err != nil && errors.IsTimeout(err) {
@@ -105,7 +86,7 @@ func (h *Helper) createService(tfJob *api.TFJob, service *v1.Service) error {
 }
 
 // createPod create a pod which is contolled by the tfjob.
-func (h *Helper) createPod(tfJob *api.TFJob, template *v1.PodTemplateSpec) error {
+func (h *Helper) CreatePod(tfJob *api.TFJob, template *v1.PodTemplateSpec) error {
 	err := h.podControl.CreatePodsWithControllerRef(
 		tfJob.Namespace, template, tfJob,
 		newControllerRef(tfJob))

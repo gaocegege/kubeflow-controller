@@ -13,17 +13,14 @@ limitations under the License.
 
 package tensorflow
 
-import (
-	"fmt"
-
-	"k8s.io/kubernetes/pkg/api/v1"
-)
+import "k8s.io/kubernetes/pkg/api/v1"
 
 // generateRuntimeID generates runtimeID.
 func generateRuntimeID() string {
-	return v1.SimpleNameGenerator.GenerateName("")
+	return generateName("")
 }
 
-func generateName(name, typ, runtimeID string) string {
-	return fmt.Sprintf("%s-%s-%s", name, typ, runtimeID)
+// generateName generates name.
+func generateName(generateName string) string {
+	return v1.SimpleNameGenerator.GenerateName(generateName)
 }

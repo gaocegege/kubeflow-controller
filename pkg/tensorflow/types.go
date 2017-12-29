@@ -25,8 +25,10 @@ type Event struct {
 type ActionType string
 
 const (
-	ActionShouldAddPS     ActionType = "ShouldAddPS"
-	ActionShouldAddWorker ActionType = "ShouldAddWorker"
-	ActionShouldDelete    ActionType = "ShouldDelete"
-	ActionNothing         ActionType = "Nothing"
+	ActionShouldAddPS            ActionType = "ShouldAddPS"
+	ActionShouldAddPSService     ActionType = "ShouldAddPSService"
+	ActionShouldAddWorker        ActionType = "ShouldAddWorker"
+	ActionShouldAddWorkerService ActionType = "ShouldAddWorkerService"
+	ActionShouldDelete           ActionType = "ShouldDelete"
+	ActionNothing                ActionType = "Nothing"
 )

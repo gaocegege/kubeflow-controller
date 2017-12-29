@@ -31,21 +31,23 @@ const (
 // DistributedJob is the type for distributed TensorFlow training job.
 type DistributedJob struct {
 	tfJob            *api.TFJob
-	activeWorkers    []*v1.Pod
+	activeWorkerPods []*v1.Pod
 	workerServices   []*v1.Service
-	activePSes       []*v1.Pod
+	activePSPods     []*v1.Pod
 	psServices       []*v1.Service
+	serviceNames     map[string]string
 	succeededWorkers int32
 }
 
-func NewDistributedJob(tfJob *api.TFJob, activeWorkers []*v1.Pod, activePSes []*v1.Pod, workerServices []*v1.Service, psServices []*v1.Service, succeededWorkers int32) *DistributedJob {
+func NewDistributedJob(tfJob *api.TFJob, activeWorkerPods []*v1.Pod, activePSPods []*v1.Pod, workerServices []*v1.Service, psServices []*v1.Service, succeededWorkers int32) *DistributedJob {
 	dj := &DistributedJob{
 		tfJob:            tfJob,
-		activeWorkers:    activeWorkers,
+		activeWorkerPods: activeWorkerPods,
 		workerServices:   workerServices,
-		activePSes:       activePSes,
+		activePSPods:     activePSPods,
 		psServices:       psServices,
 		succeededWorkers: succeededWorkers,
+		serviceNames:     make(map[string]string),
 	}
 
 	return dj
@@ -54,32 +56,58 @@ func NewDistributedJob(tfJob *api.TFJob, activeWorkers []*v1.Pod, activePSes []*
 func (dj *DistributedJob) Action() []Event {
 	events := make([]Event, 0)
 
-	expected := int(*dj.getWorkerSpec().Replicas - dj.succeededWorkers)
-	activeWorkersCount := len(dj.activeWorkers)
+	// Create services first.
+	expectedWorker := int(*dj.getWorkerSpec().Replicas - dj.succeededWorkers)
+	workerServicesCount := len(dj.workerServices)
+	activeWorkerPodsCount := len(dj.activeWorkerPods)
 
-	if activeWorkersCount < expected {
-		glog.V(4).Infof("Expected workers to be %d but got %d, create %d new workers", expected, activeWorkersCount, expected-activeWorkersCount)
+	// TODO(gaocegege): Check succeeded.
+	expectedPS := int(*dj.getPSSpec().Replicas)
+	psServicesCount := len(dj.psServices)
+	activePSPodsCount := len(dj.activePSPods)
 
-		// TODO: Using once is better.
+	if workerServicesCount == 0 {
+		glog.V(4).Infof("Expected worker services to be %d but got %d, create %d new workers", expectedWorker, workerServicesCount, expectedWorker-workerServicesCount)
+		events = append(events, Event{
+			Action: ActionShouldAddWorkerService,
+			Number: int(expectedWorker - workerServicesCount),
+		})
+	} else if workerServicesCount < expectedWorker {
+		// TODO(gaocegege): deal with the situation.
+		glog.V(4).Infof("Expected worker services to be %d but got %d, create %d new workers", expectedWorker, workerServicesCount, expectedWorker-workerServicesCount)
+	}
+
+	if psServicesCount == 0 {
+		glog.V(4).Infof("Expected ps services to be %d but got %d, create %d new workers", expectedPS, psServicesCount, expectedPS-psServicesCount)
+		events = append(events, Event{
+			Action: ActionShouldAddPSService,
+			Number: int(expectedPS - psServicesCount),
+		})
+	} else if psServicesCount < expectedPS {
+		// TODO(gaocegege): deal with the situation.
+		glog.V(4).Infof("Expected ps services to be %d but got %d, create %d new workers", expectedPS, psServicesCount, expectedPS-psServicesCount)
+	}
+
+	if activeWorkerPodsCount < expectedWorker {
+		glog.V(4).Infof("Expected workers to be %d but got %d, create %d new workers", expectedWorker, activeWorkerPodsCount, expectedWorker-activeWorkerPodsCount)
+
+		// TODO(gaocegege): Using once is better.
 		dj.compose()
 		events = append(events, Event{
 			Action: ActionShouldAddWorker,
-			Number: int(expected - activeWorkersCount),
+			Number: int(expectedWorker - activeWorkerPodsCount),
 		})
-	} else if activeWorkersCount == int(expected) {
+	} else if activeWorkerPodsCount == expectedWorker {
 		events = append(events, Event{
 			Action: ActionNothing,
 		})
 	}
 
-	expected = int(*dj.getPSSpec().Replicas)
-	activePSesCount := len(dj.activePSes)
-
-	if activePSesCount < expected {
-		glog.V(4).Infof("Expected replicaset to be %d but got %d, create %d new replicasets", expected, activePSesCount, expected-activePSesCount)
+	if activePSPodsCount < expectedPS {
+		glog.V(4).Infof("Expected PS pods to be %d but got %d, create %d new PS pods", expectedPS, activePSPodsCount, expectedPS-activePSPodsCount)
 		events = append(events, Event{
 			Action: ActionShouldAddPS,
-			Number: int(expected - activePSesCount),
+			Number: int(expectedPS - activePSPodsCount),
 		})
 	}
 	return events
@@ -89,7 +117,7 @@ func (dj *DistributedJob) Action() []Event {
 func (dj *DistributedJob) GetSpec(typ api.TFReplicaType, index int) *api.TFReplicaSpec {
 	template := dj.tfJob.Spec.Specs[dj.getTemplateIndex(typ)].Template
 
-	// We need deepcopy
+	// TODO(gaocegege): We need deepcopy
 	template.Labels["index"] = fmt.Sprintf("%d", index)
 	template.Spec.Containers[0].Args = dj.generateTFClusterSpec(typ, index)
 
@@ -98,8 +126,9 @@ func (dj *DistributedJob) GetSpec(typ api.TFReplicaType, index int) *api.TFRepli
 
 func (dj *DistributedJob) generateTFClusterSpec(typ api.TFReplicaType, index int) []string {
 	workerHosts := make([]string, 0)
-	for i := 0; i < int(*dj.tfJob.Spec.Specs[dj.getTemplateIndex(api.TFReplicaWorker)].Replicas); i++ {
-		workerHosts = append(workerHosts, fmt.Sprintf("%s:%d", dj.getServiceName("worker", i), workerPort))
+	workerReplicas := int(*dj.getWorkerSpec().Replicas)
+	for i := 0; i < workerReplicas; i++ {
+		workerHosts = append(workerHosts, fmt.Sprintf("%s:%d", dj.serviceNames[dj.getServiceName(api.TFReplicaWorker, i)], workerPort))
 	}
 	workerHostsStr := "--worker_hosts="
 	for _, workerHost := range workerHosts {
@@ -108,8 +137,9 @@ func (dj *DistributedJob) generateTFClusterSpec(typ api.TFReplicaType, index int
 	workerHostsStr = workerHostsStr[:len(workerHostsStr)-1]
 
 	psHosts := make([]string, 0)
-	for i := 0; i < int(*dj.tfJob.Spec.Specs[dj.getTemplateIndex(api.TFReplicaPS)].Replicas); i++ {
-		psHosts = append(psHosts, fmt.Sprintf("%s:%d", dj.getServiceName("ps", i), workerPort))
+	psReplicas := int(*dj.getPSSpec().Replicas)
+	for i := 0; i < psReplicas; i++ {
+		psHosts = append(psHosts, fmt.Sprintf("%s:%d", dj.serviceNames[dj.getServiceName(api.TFReplicaPS, i)], workerPort))
 	}
 	psHostsStr := "--ps_hosts="
 	for _, psHost := range psHosts {
@@ -128,18 +158,21 @@ func (dj *DistributedJob) generateTFClusterSpec(typ api.TFReplicaType, index int
 	}
 }
 
-func (dj *DistributedJob) getServiceName(typeName string, index int) string {
-	return fmt.Sprintf("%s-%s-%d", dj.tfJob.Name, typeName, index)
+func (dj *DistributedJob) getServiceName(typ api.TFReplicaType, index int) string {
+	return fmt.Sprintf("%s-%s-%d", dj.tfJob.Name, strings.ToLower(string(typ)), index)
 }
 
 func (dj *DistributedJob) GetService(typ api.TFReplicaType, index int) *v1.Service {
-	typeName := strings.ToLower(string(typ))
 	labels := dj.getLabels(typ)
 	labels["index"] = fmt.Sprintf("%d", index)
 
+	name := dj.getServiceName(typ, index)
+	generateName := generateName(fmt.Sprintf("%s-", dj.getServiceName(typ, index)))
+	dj.serviceNames[name] = generateName
+
 	return &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   dj.getServiceName(typeName, index),
+			Name:   generateName,
 			Labels: labels,
 		},
 		Spec: v1.ServiceSpec{
@@ -172,7 +205,7 @@ func (dj DistributedJob) getTemplateIndex(typ api.TFReplicaType) int {
 	return -1
 }
 
-// TODO: Find a graceful way to void runtimeID.
+// TODO(gaocegege): Find a graceful way to void runtimeID.
 // Notice: DO NOT call it multiple times for a tfjob since its runtime ID will be changed.
 func (dj *DistributedJob) compose() {
 	wokerSpec := dj.getWorkerSpec()
@@ -182,6 +215,7 @@ func (dj *DistributedJob) compose() {
 	wokerSpec.Template.Labels = dj.getLabels(api.TFReplicaWorker)
 
 	psSpec.Template.Labels = dj.getLabels(api.TFReplicaPS)
+	// TODO(gaocegege): Compose the serviceNames.
 }
 
 func (dj DistributedJob) getLabels(typ api.TFReplicaType) map[string]string {

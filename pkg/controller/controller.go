@@ -312,15 +312,15 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	}
 
-	activeWorkers := controller.FilterActivePods(workerPods)
+	activeWorkerPods := controller.FilterActivePods(workerPods)
 	succeededWorkers, _ := getStatus(workerPods)
 
-	activePSes := controller.FilterActivePods(psPods)
+	activePSPods := controller.FilterActivePods(psPods)
 
 	// TODO(gaocegege): Check if the TFJob is valid.
 
 	if jobNeedsSync && tfJob.DeletionTimestamp == nil {
-		c.manageTFJob(activeWorkers, activePSes, workerServices, psServices, succeededWorkers, tfJob)
+		c.manageTFJob(activeWorkerPods, activePSPods, workerServices, psServices, succeededWorkers, tfJob)
 	}
 
 	if checker.IsLocalJob(tfJob) {
@@ -334,7 +334,7 @@ func (c *Controller) syncHandler(key string) error {
 	// Update the status.
 	// TODO(gaocegege): Check first.
 	state := api.TFReplicaLocal
-	for _, pod := range activeWorkers {
+	for _, pod := range activeWorkerPods {
 		tfJob.Status.TFReplicaStatuses = make([]*api.TFReplicaStatus, 0)
 		replicaStatus := &api.TFReplicaStatus{
 			Type:  &state,
@@ -352,41 +352,61 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) manageTFJob(activeWorkers []*v1.Pod, activePSes []*v1.Pod, workerServices []*v1.Service, psServices []*v1.Service, succeeded int32, tfJob *api.TFJob) (int32, error) {
+func (c *Controller) manageTFJob(activeWorkerPods []*v1.Pod, activePSPods []*v1.Pod, workerServices []*v1.Service, psServices []*v1.Service, succeeded int32, tfJob *api.TFJob) (int32, error) {
 	jobKey, err := controller.KeyFunc(tfJob)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("Couldn't get key for job %#v: %v", tfJob, err))
 		return 0, nil
 	}
-	glog.V(4).Infof("Manage the TFJob %s, active workers: %d, active parameter servers: %d", tfJob.Name, len(activeWorkers), len(activePSes))
+	glog.V(4).Infof("Manage the TFJob %s, active workers: %d, active parameter servers: %d", tfJob.Name, len(activeWorkerPods), len(activePSPods))
 
 	if checker.IsLocalJob(tfJob) {
-		localJob := tensorflow.NewLocalJob(tfJob, activeWorkers, succeeded)
+		localJob := tensorflow.NewLocalJob(tfJob, activeWorkerPods, succeeded)
 		event := localJob.Action()
 		switch event.Action {
 		case tensorflow.ActionShouldAddWorker:
 			glog.V(4).Infof("Expect to create %d pod", event.Number)
 			c.expectations.ExpectCreations(jobKey, event.Number)
-			if err := c.helper.CreateLocal(tfJob, tfJob.Spec.Specs[0].Template); err != nil {
+			if err := c.helper.CreatePod(tfJob, tfJob.Spec.Specs[0].Template); err != nil {
 				defer runtime.HandleError(err)
-				glog.V(2).Infof("Failed creation, decrementing expectations for job %q/%q", tfJob.Namespace, tfJob.Name)
+				glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
 				c.expectations.CreationObserved(jobKey)
 			}
 		case tensorflow.ActionNothing:
 			glog.V(4).Info("Nothing to do.")
 		}
 	} else {
-		distributedJob := tensorflow.NewDistributedJob(tfJob, activeWorkers, activePSes, workerServices, psServices, succeeded)
+		distributedJob := tensorflow.NewDistributedJob(tfJob, activeWorkerPods, activePSPods, workerServices, psServices, succeeded)
 		events := distributedJob.Action()
 		for _, event := range events {
 			switch event.Action {
+			case tensorflow.ActionShouldAddWorkerService:
+				glog.V(4).Infof("Need create %d service(s)", event.Number)
+				c.expectations.ExpectCreations(jobKey, event.Number)
+				for i := 0; i < event.Number; i++ {
+					if err := c.helper.CreateService(tfJob, distributedJob.GetService(api.TFReplicaWorker, i)); err != nil {
+						defer runtime.HandleError(err)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
+						c.expectations.CreationObserved(jobKey)
+					}
+				}
+			case tensorflow.ActionShouldAddPSService:
+				glog.V(4).Infof("Need create %d service(s)", event.Number)
+				c.expectations.ExpectCreations(jobKey, event.Number)
+				for i := 0; i < event.Number; i++ {
+					if err := c.helper.CreateService(tfJob, distributedJob.GetService(api.TFReplicaPS, i)); err != nil {
+						defer runtime.HandleError(err)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
+						c.expectations.CreationObserved(jobKey)
+					}
+				}
 			case tensorflow.ActionShouldAddWorker:
 				glog.V(4).Infof("Expect to create %d pod(s)", event.Number)
 				c.expectations.ExpectCreations(jobKey, event.Number)
 				for i := 0; i < event.Number; i++ {
-					if err := c.helper.CreateDistributed(tfJob, distributedJob.GetSpec(api.TFReplicaWorker, i).Template, distributedJob.GetService(api.TFReplicaWorker, i)); err != nil {
+					if err := c.helper.CreatePod(tfJob, distributedJob.GetSpec(api.TFReplicaWorker, i).Template); err != nil {
 						defer runtime.HandleError(err)
-						glog.V(2).Infof("Failed creation, decrementing expectations for job %q/%q", tfJob.Namespace, tfJob.Name)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
 						c.expectations.CreationObserved(jobKey)
 					}
 				}
@@ -394,9 +414,9 @@ func (c *Controller) manageTFJob(activeWorkers []*v1.Pod, activePSes []*v1.Pod, 
 				glog.V(4).Infof("Expect to create %d PS(es)", event.Number)
 				c.expectations.ExpectCreations(jobKey, event.Number)
 				for i := 0; i < event.Number; i++ {
-					if err := c.helper.CreateDistributed(tfJob, distributedJob.GetSpec(api.TFReplicaPS, i).Template, distributedJob.GetService(api.TFReplicaPS, i)); err != nil {
+					if err := c.helper.CreatePod(tfJob, distributedJob.GetSpec(api.TFReplicaPS, i).Template); err != nil {
 						defer runtime.HandleError(err)
-						glog.V(2).Infof("Failed creation, decrementing expectations for job %q/%q", tfJob.Namespace, tfJob.Name)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
 						c.expectations.CreationObserved(jobKey)
 					}
 				}
