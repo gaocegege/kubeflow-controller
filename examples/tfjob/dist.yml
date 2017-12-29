@@ -1,0 +1,45 @@
+apiVersion: "kubeflow.caicloud.io/v1alpha1"
+kind: "TFJob"
+metadata:
+  name: "dist-training-job"
+spec:
+  tfReplicaSpec:
+  - replicas: 2
+    tfReplicaType: PS
+    template:
+      spec:
+        containers:
+        - name: tensorflow
+          image: cargo.caicloud.io/clever-base/tensorflow:v1.4.0
+          command: ["python", "/workdir/mnist_replica.py"]
+          volumeMounts:
+          - name: workdir
+            mountPath: /workdir
+          ports:
+          - containerPort: 2222
+        volumes:
+        - name: workdir
+          hostPath:
+            # TODO: Use https://github.com/kubernetes/helm
+            path: $KUBEFLOW_HOSTPATH
+            type: Directory
+  - replicas: 4
+    tfReplicaType: Worker
+    template:
+      spec:
+        containers:
+        - name: tensorflow
+          image: cargo.caicloud.io/clever-base/tensorflow:v1.4.0
+          command: ["python", "/workdir/mnist_replica.py"]
+          volumeMounts:
+          - name: workdir
+            mountPath: /workdir
+          ports:
+          - containerPort: 2222
+        volumes:
+        - name: workdir
+          hostPath:
+            # TODO: Use https://github.com/kubernetes/helm
+            path: $KUBEFLOW_HOSTPATH
+            type: Directory
+        restartPolicy: OnFailure

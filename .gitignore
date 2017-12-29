@@ -17,3 +17,6 @@
 # Project Specific
 # Binaries
 kubeflow-controller
+
+# Datasets
+mnist-data/

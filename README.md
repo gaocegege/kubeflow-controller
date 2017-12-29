@@ -1,44 +1,43 @@
+[tensorflow/k8s]: https://github.com/tensorflow/k8s
+[caicloud/kubeflow-clientset]: https://github.com/caicloud/kubeflow-clientset
+
 # KubeFlow Controller
 
-KubeFlow Controller is the controller for [KubeFlow CRD](https://github.com/caicloud/kubeflow-clientset), which is TensorFlow training job definition on Kubernetes.
+Kubeflow controller is the open source re-implementation of part of the internal tool, ml-executor, in CaiCloud. This project is temporary and we hope we could use [tensorflow/k8s][] powered by the Kubeflow community eventually to replace this controller.
 
-KubeFlow Controller is the private implementation of [tensorflow/k8s](https://github.com/tensorflow/k8s), which will eventually replace this repository.
+## Background
 
-## HOWTO
+Recently Google open sources a new project [Kubeflow](https://github.com/google/kubeflow), which is dedicated to making using ML stacks on Kubernetes easy, fast and extensible.
 
-### Build
+We have a similar project in CaiCloud and it serves for several years. In that project we took different approaches but similar design decisions to Kubeflow. Then we re-implement our internal tool and open source it to accelerate the development of the community powered controller [tensorflow/k8s][].
 
-```go
-make
-```
+## Overview
 
-### Run
+We separate Kubeflow into two parts:
 
-```
-./bin/kubeflow-controller -kubeconfig <PATH TO KUBECONFIG>
-```
+- Kubeflow controller, which contains the controller for Kuberflow CRD.
+- [Kubeflow clientset][caicloud/kubeflow-clientset], which contains the clientset and CRD specification for Kubeflow.
 
-### Help
+There are some differences between [tensorflow/k8s][] and this controller:
 
-```
-$ ./bin/kubeflow-controller -h
-Usage of ./kubeflow-controller:
-  -alsologtostderr
-    	log to standard error as well as files
-  -kubeconfig string
-    	Path to a kubeconfig. Only required if out-of-cluster.
-  -log_backtrace_at value
-    	when logging hits line file:N, emit a stack trace
-  -log_dir string
-    	If non-empty, write log files in this directory
-  -logtostderr
-    	log to standard error instead of files
-  -master string
-    	The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.
-  -stderrthreshold value
-    	logs at or above this threshold go to stderr
-  -v value
-    	log level for V logs
-  -vmodule value
-    	comma-separated list of pattern=N settings for file-filtered logging
-```
+- caicloud/kubeflow-controller follows the design pattern of controller, which does not keep a state machine in the code and just moves from the current state to the desired state. tensorflow/k8s follows the design pattern of operator.
+- caicloud/kubeflow-controller uses pods to run the workers and PS, while tensorflow/k8s uses jobs.
+
+Besides these, there are also some differences between [tensorflow/k8s CRD][tensorflow/k8s] and [caicloud/kubeflow-clientset CRD][caicloud/kubeflow-clientset]:
+
+- We do not support TensorBoard in the CRD, since the TensorBoard and Serving support will be in other CRDs.
+
+These three points are the biggest differences, others could be ignored or unified.
+
+## Get Started
+
+The controller is easy to use, see [docs/get_started.md](docs/get_started.md) for more details.
+
+## CONTRIBUTING
+
+Feel free to hack on the controller! [docs/development.md](docs/development.md) will help you to get involved into the development.
+
+## Acknowledgments
+
+- Thanks [Kubeflow community](https://github.com/google/kubeflow) for the awesome open source project.
+- Thanks [tensorflow/k8s][] authors for the operator.
