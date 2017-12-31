@@ -1,0 +1,24 @@
+apiVersion: "kubeflow.caicloud.io/v1alpha1"
+kind: "TFJob"
+metadata:
+  name: "local-training-job"
+spec:
+  tfReplicaSpec:
+  - replicas: 1
+    tfReplicaType: Local
+    template:
+      spec:
+        containers:
+        - name: tensorflow
+          image: cargo.caicloud.io/clever-base/tensorflow:v1.4.0
+          command: ["python", "/workdir/mnist_softmax.py"]
+          volumeMounts:
+          - name: workdir
+            mountPath: /workdir
+        volumes:
+        - name: workdir
+          hostPath:
+            # TODO: Use https://github.com/kubernetes/helm
+            path: $KUBEFLOW_HOSTPATH
+            type: Directory
+        restartPolicy: OnFailure
