@@ -5,12 +5,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/caicloud/kubeflow-controller/pkg/composer"
+	"github.com/caicloud/kubeflow-controller/pkg/controller/control"
+	"github.com/caicloud/kubeflow-controller/pkg/controller/updater"
+	"github.com/caicloud/kubeflow-controller/pkg/tensorflow"
 
 	"github.com/caicloud/kubeflow-controller/pkg/checker"
 
 	api "github.com/caicloud/kubeflow-clientset/apis/kubeflow/v1alpha1"
-	kubeflowalpha1 "github.com/caicloud/kubeflow-clientset/apis/kubeflow/v1alpha1"
 	clientset "github.com/caicloud/kubeflow-clientset/clientset/versioned"
 	kubeflowscheme "github.com/caicloud/kubeflow-clientset/clientset/versioned/scheme"
 	informers "github.com/caicloud/kubeflow-clientset/informers/externalversions"
@@ -19,15 +20,12 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	kubelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -42,14 +40,6 @@ const (
 	// MessageResourceSynced is the message used for an Event fired when a TFJob
 	// is synced successfully
 	MessageResourceSynced = "TFJob synced successfully"
-)
-
-var (
-	groupVersionKind = schema.GroupVersionKind{
-		Group:   api.GroupName,
-		Version: api.GroupVersion,
-		Kind:    api.TFJobResourceKind,
-	}
 )
 
 // Controller is the type for TFJob controller.
@@ -74,8 +64,8 @@ type Controller struct {
 
 	// A TTLCache of pod creates/deletes each rc expects to see
 	expectations controller.ControllerExpectationsInterface
-	podControl   controller.PodControlInterface
-	podLister    kubelisters.PodLister
+
+	helper HelperInterface
 
 	// TODO(gaocegege): Add a map o keep track of all trainers.
 }
@@ -90,6 +80,8 @@ func NewController(
 	// obtain references to shared index informers for the tfJob type
 
 	tfJobInformer := tfJobInformerFactory.Kubeflow().V1alpha1().TFJobs()
+	podInformer := kubeInformerFactory.Core().V1().Pods()
+	serviceInformer := kubeInformerFactory.Core().V1().Services()
 
 	// Create event broadcaster
 	// Add tfJob-controller types to the default Kubernetes Scheme so Events can be
@@ -101,18 +93,28 @@ func NewController(
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerName})
 
+	podControl := controller.RealPodControl{
+		KubeClient: kubeclientset,
+		Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerName}),
+	}
+	serviceControl := control.RealServiceControl{
+		KubeClient: kubeclientset,
+		Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: controllerName}),
+	}
+	podLister := podInformer.Lister()
+	serviceLister := serviceInformer.Lister()
+
+	helper := NewHelper(tfJobclientset, podLister, podControl, serviceLister, serviceControl)
+
 	controller := &Controller{
 		kubeclientset:  kubeclientset,
 		tfJobclientset: tfJobclientset,
-		podControl: controller.RealPodControl{
-			KubeClient: kubeclientset,
-			Recorder:   recorder,
-		},
-		tfJobLister:  tfJobInformer.Lister(),
-		expectations: controller.NewControllerExpectations(),
-		tfJobSynced:  tfJobInformer.Informer().HasSynced,
-		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "tfJobs"),
-		recorder:     recorder,
+		helper:         helper,
+		tfJobLister:    tfJobInformer.Lister(),
+		expectations:   controller.NewControllerExpectations(),
+		tfJobSynced:    tfJobInformer.Informer().HasSynced,
+		workqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "tfJobs"),
+		recorder:       recorder,
 	}
 
 	glog.Info("Setting up event handlers")
@@ -121,8 +123,8 @@ func NewController(
 		AddFunc: controller.handleObject,
 		UpdateFunc: func(old, new interface{}) {
 			glog.Info("Update tfJob")
-			newTFJob := new.(*kubeflowalpha1.TFJob)
-			oldTFJob := old.(*kubeflowalpha1.TFJob)
+			newTFJob := new.(*api.TFJob)
+			oldTFJob := old.(*api.TFJob)
 			if newTFJob.ResourceVersion == oldTFJob.ResourceVersion {
 				glog.Infof("ResourceVersion not changed: %s", newTFJob.ResourceVersion)
 				// Periodic resync will send update events for all known tfJobes.
@@ -133,13 +135,18 @@ func NewController(
 		},
 		DeleteFunc: controller.handleObject,
 	})
-	podInformer := kubeInformerFactory.Core().V1().Pods()
+
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.addPod,
 		UpdateFunc: controller.updatePod,
-		// DeleteFunc: controller.deletePod,
+		DeleteFunc: controller.deletePod,
 	})
-	controller.podLister = podInformer.Lister()
+
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.addService,
+		UpdateFunc: controller.updateService,
+		DeleteFunc: controller.deleteService,
+	})
 
 	return controller
 }
@@ -265,43 +272,67 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	pods, err := c.getPodsForJob(tfJob)
-	if err != nil {
-		return err
+	var workerPods []*v1.Pod
+	var psPods []*v1.Pod
+	var workerServices []*v1.Service
+	var psServices []*v1.Service
+
+	isLocalJob := checker.IsLocalJob(tfJob)
+
+	if isLocalJob {
+		workerPods, err = c.helper.GetPodsForTFJob(tfJob, api.TFReplicaLocal)
+		if err != nil {
+			return err
+		}
+	} else {
+		workerPods, err = c.helper.GetPodsForTFJob(tfJob, api.TFReplicaWorker)
+		if err != nil {
+			return err
+		}
+		psPods, err = c.helper.GetPodsForTFJob(tfJob, api.TFReplicaPS)
+		if err != nil {
+			return err
+		}
+		workerServices, err = c.helper.GetServicesForTFJob(tfJob, api.TFReplicaWorker)
+		if err != nil {
+			return err
+		}
+		psServices, err = c.helper.GetServicesForTFJob(tfJob, api.TFReplicaPS)
+		if err != nil {
+			return err
+		}
 	}
 
-	activePods := controller.FilterActivePods(pods)
-	succeeded, _ := getStatus(pods)
+	activeWorkerPods := controller.FilterActivePods(workerPods)
+	succeededWorkerPods, _ := getStatus(workerPods)
+
+	activePSPods := controller.FilterActivePods(psPods)
+
 	// TODO(gaocegege): Check if the TFJob is valid.
 
-	if jobNeedsSync {
-		c.manageTFJob(activePods, succeeded, tfJob)
-	}
-
-	complete := false
-	if succeeded == 1 {
-		complete = true
-	}
-
-	if complete {
-		// job.Status.Conditions = append(job.Status.Conditions, newCondition(batch.JobComplete, "", ""))
-		tfJob.Status.Phase = api.TFJobSucceeded
-	}
-
-	// Update the status.
-	// TODO(gaocegege): Check first.
-	state := api.TFReplicaLocal
-	for _, pod := range activePods {
-		tfJob.Status.TFReplicaStatuses = make([]*api.TFReplicaStatus, 0)
-		replicaStatus := &api.TFReplicaStatus{
-			Type:  &state,
-			State: api.TFReplicaState(pod.Status.Phase),
+	if jobNeedsSync && tfJob.DeletionTimestamp == nil {
+		_, _, err := c.manageTFJob(activeWorkerPods, activePSPods, workerServices, psServices, succeededWorkerPods, tfJob)
+		if err != nil {
+			return err
 		}
-		tfJob.Status.TFReplicaStatuses = append(tfJob.Status.TFReplicaStatuses, replicaStatus)
 	}
 
-	if err := c.updateTFJob(tfJob); err != nil {
-		return err
+	shouldUpdateStatus := false
+	if isLocalJob {
+		updater, err := updater.NewLocal(tfJob, int(succeededWorkerPods), workerPods)
+		if err != nil {
+			return err
+		}
+		shouldUpdateStatus = updater.ShouldUpdate()
+	} else {
+		updater := updater.NewDistributed(tfJob, int(succeededWorkerPods), workerPods, psPods)
+		shouldUpdateStatus = updater.ShouldUpdate()
+	}
+
+	if shouldUpdateStatus {
+		if err := c.updateTFJob(tfJob); err != nil {
+			return err
+		}
 	}
 
 	glog.V(4).Infof("Sync TFJob: %s", tfJob)
@@ -309,48 +340,91 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) manageTFJob(activePods []*v1.Pod, succeeded int32, tfJob *api.TFJob) (int32, error) {
-	active := int32(len(activePods))
+func (c *Controller) manageTFJob(activeWorkerPods []*v1.Pod, activePSPods []*v1.Pod, workerServices []*v1.Service, psServices []*v1.Service, succeeded int32, tfJob *api.TFJob) (int, int, error) {
 	jobKey, err := controller.KeyFunc(tfJob)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("Couldn't get key for job %#v: %v", tfJob, err))
-		return 0, nil
+		return 0, 0, err
 	}
+	glog.V(4).Infof("Manage the TFJob %s, active workers: %d, active parameter servers: %d", tfJob.Name, len(activeWorkerPods), len(activePSPods))
 
 	if checker.IsLocalJob(tfJob) {
-		wantActive := int32(1)
-		// Had succeeded result, not need to create new pod.
-		if succeeded > 0 {
-			wantActive = active
-		}
-		if active < wantActive {
-			glog.V(4).Infof("Need %d active pods but got %d", wantActive, active)
-			c.expectations.ExpectCreations(jobKey, int(wantActive-active))
-			composer := composer.New(tfJob)
-			composer.Compose()
-
-			err := c.podControl.CreatePodsWithControllerRef(
-				tfJob.Namespace, tfJob.Spec.Specs[0].Template, tfJob,
-				metav1.NewControllerRef(tfJob, groupVersionKind))
-			if err != nil && errors.IsTimeout(err) {
-				// Pod is created but its initialization has timed out.
-				// If the initialization is successful eventually, the
-				// controller will observe the creation via the informer.
-				// If the initialization fails, or if the pod keeps
-				// uninitialized for a long time, the informer will not
-				// receive any update, and the controller will create a new
-				// pod when the expectation expires.
-			}
-			if err != nil {
+		localJob := tensorflow.NewLocalJob(tfJob, activeWorkerPods, succeeded)
+		event := localJob.Action()
+		switch event.Action {
+		case tensorflow.ActionShouldAddWorker:
+			glog.V(4).Infof("Expect to create %d pod", event.Number)
+			c.expectations.ExpectCreations(jobKey, event.Number)
+			if err := c.helper.CreatePod(tfJob, tfJob.Spec.Specs[0].Template); err != nil {
 				defer runtime.HandleError(err)
-				glog.V(2).Infof("Failed creation, decrementing expectations for job %q/%q", tfJob.Namespace, tfJob.Name)
+				glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
 				c.expectations.CreationObserved(jobKey)
+				return 0, 0, err
 			}
-		} else {
-			glog.V(4).Info("wantActive = active, nothing to do.")
+		case tensorflow.ActionNothing:
+			glog.V(4).Info("Nothing to do.")
 		}
+		return 1, 0, nil
+	} else {
+		distributedJob := tensorflow.NewDistributedJob(tfJob, activeWorkerPods, activePSPods, workerServices, psServices, succeeded)
+		currentWorkerPods := 0
+		currentPSPods := 0
+
+		events := distributedJob.Action()
+		for _, event := range events {
+			switch event.Action {
+			case tensorflow.ActionShouldAddWorkerService:
+				glog.V(4).Infof("Need create %d service(s)", event.Number)
+				c.expectations.ExpectCreations(jobKey, event.Number)
+				for i := 0; i < event.Number; i++ {
+					if err := c.helper.CreateService(tfJob, distributedJob.GetService(api.TFReplicaWorker, i)); err != nil {
+						defer runtime.HandleError(err)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
+						c.expectations.CreationObserved(jobKey)
+					}
+				}
+			case tensorflow.ActionShouldAddPSService:
+				glog.V(4).Infof("Need create %d service(s)", event.Number)
+				c.expectations.ExpectCreations(jobKey, event.Number)
+				for i := 0; i < event.Number; i++ {
+					if err := c.helper.CreateService(tfJob, distributedJob.GetService(api.TFReplicaPS, i)); err != nil {
+						defer runtime.HandleError(err)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
+						c.expectations.CreationObserved(jobKey)
+					}
+				}
+			case tensorflow.ActionShouldAddWorker:
+				glog.V(4).Infof("Expect to create %d pod(s)", event.Number)
+				c.expectations.ExpectCreations(jobKey, event.Number)
+				currentWorkerPods = len(activeWorkerPods) + event.Number
+
+				for i := 0; i < event.Number; i++ {
+					if err := c.helper.CreatePod(tfJob, distributedJob.GetSpec(api.TFReplicaWorker, i).Template); err != nil {
+						defer runtime.HandleError(err)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
+						c.expectations.CreationObserved(jobKey)
+						return 0, 0, err
+					}
+				}
+			case tensorflow.ActionShouldAddPS:
+				glog.V(4).Infof("Expect to create %d PS(es)", event.Number)
+				c.expectations.ExpectCreations(jobKey, event.Number)
+				currentPSPods = len(activePSPods) + event.Number
+
+				for i := 0; i < event.Number; i++ {
+					if err := c.helper.CreatePod(tfJob, distributedJob.GetSpec(api.TFReplicaPS, i).Template); err != nil {
+						defer runtime.HandleError(err)
+						glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
+						c.expectations.CreationObserved(jobKey)
+						return 0, 0, err
+					}
+				}
+			case tensorflow.ActionNothing:
+				glog.V(4).Info("Nothing to do.")
+			}
+		}
+		return currentWorkerPods, currentPSPods, nil
 	}
-	return 0, nil
 }
 
 func (c *Controller) addPod(obj interface{}) {
@@ -362,7 +436,7 @@ func (c *Controller) addPod(obj interface{}) {
 	// 	return
 	// }
 
-	glog.V(4).Infof("Now pod added: %v", pod)
+	glog.V(4).Infof("New pod added: %v", pod)
 
 	// If it has a ControllerRef, that's all that matters.
 	if controllerRef := metav1.GetControllerOf(pod); controllerRef != nil {
@@ -397,14 +471,13 @@ func (c *Controller) updatePod(old, cur interface{}) {
 	// 	return
 	// }
 
-	glog.V(4).Infof("pod updated: %v, %v", curPod, oldPod)
-
 	curControllerRef := metav1.GetControllerOf(curPod)
 	oldControllerRef := metav1.GetControllerOf(oldPod)
 	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
 	if controllerRefChanged && oldControllerRef != nil {
 		// The ControllerRef was changed. Sync the old controller, if any.
 		if job := c.resolveControllerRef(oldPod.Namespace, oldControllerRef); job != nil {
+			glog.V(4).Infof("pod ControllerRef updated: %v, %v", curPod, oldPod)
 			c.enqueueTFJob(job)
 		}
 	}
@@ -415,6 +488,7 @@ func (c *Controller) updatePod(old, cur interface{}) {
 		if job == nil {
 			return
 		}
+		glog.V(4).Infof("pod has a ControllerRef: %v, %v", curPod, oldPod)
 		c.enqueueTFJob(job)
 		return
 	}
@@ -426,6 +500,93 @@ func (c *Controller) updatePod(old, cur interface{}) {
 	// 		c.enqueueTFJob(job)
 	// 	}
 	// }
+}
+
+func (c *Controller) deletePod(obj interface{}) {
+	glog.Errorln("To Be Implemented.")
+	return
+}
+
+func (c *Controller) addService(obj interface{}) {
+	service := obj.(*v1.Service)
+	// if pod.DeletionTimestamp != nil {
+	// 	// on a restart of the controller controller, it's possible a new pod shows up in a state that
+	// 	// is already pending deletion. Prevent the pod from being a creation observation.
+	// 	c.deletePod(pod)
+	// 	return
+	// }
+
+	glog.V(4).Infof("New service added: %v", service)
+
+	// If it has a ControllerRef, that's all that matters.
+	if controllerRef := metav1.GetControllerOf(service); controllerRef != nil {
+		tfJob := c.resolveControllerRef(service.Namespace, controllerRef)
+		if tfJob == nil {
+			return
+		}
+		jobKey, err := controller.KeyFunc(tfJob)
+		if err != nil {
+			return
+		}
+		c.expectations.CreationObserved(jobKey)
+		c.enqueueTFJob(tfJob)
+		return
+	}
+	return
+}
+
+func (c *Controller) updateService(old, cur interface{}) {
+	curService := cur.(*v1.Service)
+	oldService := old.(*v1.Service)
+	if curService.ResourceVersion == oldService.ResourceVersion {
+		// Periodic resync will send update events for all known services.
+		// Two different versions of the same service will always have different RVs.
+		return
+	}
+	// if curService.DeletionTimestamp != nil {
+	// 	// when a service is deleted gracefully it's deletion timestamp is first modified to reflect a grace period,
+	// 	// and after such time has passed, the kubelet actually deletes it from the store. We receive an update
+	// 	// for modification of the deletion timestamp and expect an job to create more services asap, not wait
+	// 	// until the kubelet actually deletes the service.
+	// 	jm.deleteService(curService)
+	// 	return
+	// }
+
+	curControllerRef := metav1.GetControllerOf(curService)
+	oldControllerRef := metav1.GetControllerOf(oldService)
+	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
+	if controllerRefChanged && oldControllerRef != nil {
+		// The ControllerRef was changed. Sync the old controller, if any.
+		if job := c.resolveControllerRef(oldService.Namespace, oldControllerRef); job != nil {
+			glog.V(4).Infof("service ControllerRef updated: %v, %v", curService, oldService)
+			c.enqueueTFJob(job)
+		}
+	}
+
+	// If it has a ControllerRef, that's all that matters.
+	if curControllerRef != nil {
+		job := c.resolveControllerRef(curService.Namespace, curControllerRef)
+		if job == nil {
+			return
+		}
+		glog.V(4).Infof("service has a ControllerRef: %v, %v", curService, oldService)
+		c.enqueueTFJob(job)
+		return
+	}
+
+	// // Otherwise, it's an orphan. If anything changed, sync matching controllers
+	// // to see if anyone wants to adopt it now.
+	// if controllerRefChanged {
+	// 	for _, job := range c.getServiceJobs(curService) {
+	// 		c.enqueueTFJob(job)
+	// 	}
+	// }
+	return
+}
+
+func (c *Controller) deleteService(obj interface{}) {
+	glog.Errorln("To Be Implemented.")
+	return
 }
 
 // resolveControllerRef returns the controller referenced by a ControllerRef,
@@ -447,41 +608,6 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 		return nil
 	}
 	return job
-}
-
-func (c *Controller) getPodsForJob(tfJob *api.TFJob) ([]*v1.Pod, error) {
-	// TODO(gaocegege): It is a hack, we definitely should replace it with a graceful way.
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"kubeflow.caicloud.io": "",
-			"job_type":             string(*tfJob.Spec.Specs[0].TFReplicaType),
-			"runtime_id":           tfJob.Spec.RuntimeID,
-			"tf_job_name":          tfJob.Name,
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("couldn't convert Job selector: %v", err)
-	}
-	// List all pods to include those that don't match the selector anymore
-	// but have a ControllerRef pointing to this controller.
-	pods, err := c.podLister.Pods(tfJob.Namespace).List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-	// If any adoptions are attempted, we should first recheck for deletion
-	// with an uncached quorum read sometime after listing Pods (see #42639).
-	canAdoptFunc := controller.RecheckDeletionTimestamp(func() (metav1.Object, error) {
-		fresh, err := c.tfJobclientset.KubeflowV1alpha1().TFJobs(tfJob.Namespace).Get(tfJob.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		if fresh.UID != tfJob.UID {
-			return nil, fmt.Errorf("original Job %v/%v is gone: got uid %v, wanted %v", tfJob.Namespace, tfJob.Name, fresh.UID, tfJob.UID)
-		}
-		return fresh, nil
-	})
-	cm := controller.NewPodControllerRefManager(c.podControl, tfJob, selector, groupVersionKind, canAdoptFunc)
-	return cm.ClaimPods(pods)
 }
 
 func (c *Controller) handleObject(obj interface{}) {
