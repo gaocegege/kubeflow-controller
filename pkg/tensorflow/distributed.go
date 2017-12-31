@@ -30,24 +30,24 @@ const (
 
 // DistributedJob is the type for distributed TensorFlow training job.
 type DistributedJob struct {
-	tfJob            *api.TFJob
-	activeWorkerPods []*v1.Pod
-	workerServices   []*v1.Service
-	activePSPods     []*v1.Pod
-	psServices       []*v1.Service
-	serviceNames     map[string]string
-	succeededWorkers int32
+	tfJob               *api.TFJob
+	activeWorkerPods    []*v1.Pod
+	workerServices      []*v1.Service
+	activePSPods        []*v1.Pod
+	psServices          []*v1.Service
+	serviceNames        map[string]string
+	succeededWorkerPods int32
 }
 
-func NewDistributedJob(tfJob *api.TFJob, activeWorkerPods []*v1.Pod, activePSPods []*v1.Pod, workerServices []*v1.Service, psServices []*v1.Service, succeededWorkers int32) *DistributedJob {
+func NewDistributedJob(tfJob *api.TFJob, activeWorkerPods []*v1.Pod, activePSPods []*v1.Pod, workerServices []*v1.Service, psServices []*v1.Service, succeededWorkerPods int32) *DistributedJob {
 	dj := &DistributedJob{
-		tfJob:            tfJob,
-		activeWorkerPods: activeWorkerPods,
-		workerServices:   workerServices,
-		activePSPods:     activePSPods,
-		psServices:       psServices,
-		succeededWorkers: succeededWorkers,
-		serviceNames:     make(map[string]string),
+		tfJob:               tfJob,
+		activeWorkerPods:    activeWorkerPods,
+		workerServices:      workerServices,
+		activePSPods:        activePSPods,
+		psServices:          psServices,
+		succeededWorkerPods: succeededWorkerPods,
+		serviceNames:        make(map[string]string),
 	}
 
 	return dj
@@ -57,7 +57,7 @@ func (dj *DistributedJob) Action() []Event {
 	events := make([]Event, 0)
 
 	// Create services first.
-	expectedWorker := int(*dj.getWorkerSpec().Replicas - dj.succeededWorkers)
+	expectedWorker := int(*dj.getWorkerSpec().Replicas - dj.succeededWorkerPods)
 	workerServicesCount := len(dj.workerServices)
 	activeWorkerPodsCount := len(dj.activeWorkerPods)
 
@@ -89,7 +89,7 @@ func (dj *DistributedJob) Action() []Event {
 	}
 
 	if activeWorkerPodsCount < expectedWorker {
-		glog.V(4).Infof("Expected workers to be %d but got %d, create %d new workers", expectedWorker, activeWorkerPodsCount, expectedWorker-activeWorkerPodsCount)
+		glog.V(4).Infof("Expected worker pods to be %d but got %d, create %d new workers", expectedWorker, activeWorkerPodsCount, expectedWorker-activeWorkerPodsCount)
 
 		// TODO(gaocegege): Using once is better.
 		dj.compose()
@@ -208,13 +208,13 @@ func (dj DistributedJob) getTemplateIndex(typ api.TFReplicaType) int {
 // TODO(gaocegege): Find a graceful way to void runtimeID.
 // Notice: DO NOT call it multiple times for a tfjob since its runtime ID will be changed.
 func (dj *DistributedJob) compose() {
-	wokerSpec := dj.getWorkerSpec()
-	psSpec := dj.getPSSpec()
+	workerPodSpec := dj.getWorkerSpec()
+	psPodSpec := dj.getPSSpec()
 
 	dj.tfJob.Spec.RuntimeID = generateRuntimeID()
-	wokerSpec.Template.Labels = dj.getLabels(api.TFReplicaWorker)
+	workerPodSpec.Template.Labels = dj.getLabels(api.TFReplicaWorker)
 
-	psSpec.Template.Labels = dj.getLabels(api.TFReplicaPS)
+	psPodSpec.Template.Labels = dj.getLabels(api.TFReplicaPS)
 	// TODO(gaocegege): Compose the serviceNames.
 }
 
