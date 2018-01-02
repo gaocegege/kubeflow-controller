@@ -1,0 +1,15 @@
+language: go
+
+go:
+  - 1.8
+  - 1.9
+
+before_install:
+  - go get github.com/mattn/goveralls
+  - go get -u github.com/alecthomas/gometalinter
+  - gometalinter --install
+
+script:
+  # - gometalinter --config=config.json ./...
+  # - goveralls -service=travis-ci
+  echo 'done'
