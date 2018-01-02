@@ -75,7 +75,7 @@ func NewServiceControllerRefManager(
 // Optional: If one or more filters are specified, a Service will only be claimed if
 // all filters return true.
 //
-// A non-nil error is returned if some form of reconciliation was attemped and
+// A non-nil error is returned if some form of reconciliation was attempted and
 // failed. Usually, controllers should try again later in case reconciliation
 // is still needed.
 //
