@@ -10,6 +10,6 @@ before_install:
   - gometalinter --install
 
 script:
-  # - gometalinter --config=config.json ./...
+  - gometalinter --config=config.json ./...
   - make
   - goveralls -service=travis-ci
