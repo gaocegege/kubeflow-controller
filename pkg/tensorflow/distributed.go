@@ -70,7 +70,7 @@ func (dj *DistributedJob) Action() []Event {
 		glog.V(4).Infof("Expected worker services to be %d but got %d, create %d new workers", expectedWorker, workerServicesCount, expectedWorker-workerServicesCount)
 		events = append(events, Event{
 			Action: ActionShouldAddWorkerService,
-			Number: int(expectedWorker - workerServicesCount),
+			Number: expectedWorker - workerServicesCount,
 		})
 	} else if workerServicesCount < expectedWorker {
 		// TODO(gaocegege): deal with the situation.
@@ -81,7 +81,7 @@ func (dj *DistributedJob) Action() []Event {
 		glog.V(4).Infof("Expected ps services to be %d but got %d, create %d new workers", expectedPS, psServicesCount, expectedPS-psServicesCount)
 		events = append(events, Event{
 			Action: ActionShouldAddPSService,
-			Number: int(expectedPS - psServicesCount),
+			Number: expectedPS - psServicesCount,
 		})
 	} else if psServicesCount < expectedPS {
 		// TODO(gaocegege): deal with the situation.
@@ -95,7 +95,7 @@ func (dj *DistributedJob) Action() []Event {
 		dj.compose()
 		events = append(events, Event{
 			Action: ActionShouldAddWorker,
-			Number: int(expectedWorker - activeWorkerPodsCount),
+			Number: expectedWorker - activeWorkerPodsCount,
 		})
 	} else if activeWorkerPodsCount == expectedWorker {
 		events = append(events, Event{
@@ -107,7 +107,7 @@ func (dj *DistributedJob) Action() []Event {
 		glog.V(4).Infof("Expected PS pods to be %d but got %d, create %d new PS pods", expectedPS, activePSPodsCount, expectedPS-activePSPodsCount)
 		events = append(events, Event{
 			Action: ActionShouldAddPS,
-			Number: int(expectedPS - activePSPodsCount),
+			Number: expectedPS - activePSPodsCount,
 		})
 	}
 	return events
