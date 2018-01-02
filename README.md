@@ -39,5 +39,5 @@ Feel free to hack on the controller! [docs/development.md](docs/development.md) 
 
 ## Acknowledgments
 
-- Thanks [Kubeflow community](https://github.com/google/kubeflow) for the awesome open source project.
-- Thanks [tensorflow/k8s][] authors for the operator.
+- Thanks to [Kubeflow community](https://github.com/google/kubeflow) for the awesome open source project.
+- Thanks to [tensorflow/k8s][] authors for the operator.
