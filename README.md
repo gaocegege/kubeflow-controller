@@ -3,6 +3,11 @@
 
 # KubeFlow Controller
 
+[![Build Status](https://travis-ci.org/caicloud/kubeflow-controller.svg?branch=master)](https://travis-ci.org/caicloud/kubeflow-controller)
+[![Coverage Status](https://coveralls.io/repos/github/caicloud/kubeflow-controller/badge.svg?branch=master)](https://coveralls.io/github/caicloud/kubeflow-controller?branch=master)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/caicloud/kubeflow-controller)
+[![Go Report Card](https://goreportcard.com/badge/github.com/caicloud/kubeflow-controller)](https://goreportcard.com/report/github.com/caicloud/kubeflow-controller)
+
 Kubeflow controller is the open source re-implementation of part of the internal tool, ml-executor, in CaiCloud. This project is temporary and we hope we could use [tensorflow/k8s][] powered by the Kubeflow community eventually to replace this controller.
 
 ## Background
@@ -15,17 +20,17 @@ We have a similar project in CaiCloud and it serves for several years. In that p
 
 We separate Kubeflow into two parts:
 
-- Kubeflow controller, which contains the controller for Kuberflow CRD.
-- [Kubeflow clientset][caicloud/kubeflow-clientset], which contains the clientset and CRD specification for Kubeflow.
+* Kubeflow controller, which contains the controller for Kuberflow CRD.
+* [Kubeflow clientset][caicloud/kubeflow-clientset], which contains the clientset and CRD specification for Kubeflow.
 
 There are some differences between [tensorflow/k8s][] and this controller:
 
-- caicloud/kubeflow-controller follows the design pattern of controller, which does not keep a state machine in the code and just moves from the current state to the desired state. tensorflow/k8s follows the design pattern of operator.
-- caicloud/kubeflow-controller uses pods to run the workers and PS, while tensorflow/k8s uses jobs.
+* caicloud/kubeflow-controller follows the design pattern of controller, which does not keep a state machine in the code and just moves from the current state to the desired state. tensorflow/k8s follows the design pattern of operator.
+* caicloud/kubeflow-controller uses pods to run the workers and PS, while tensorflow/k8s uses jobs.
 
 Besides these, there are also some differences between [tensorflow/k8s CRD][tensorflow/k8s] and [caicloud/kubeflow-clientset CRD][caicloud/kubeflow-clientset]:
 
-- We do not support TensorBoard in the CRD, since the TensorBoard and Serving support will be in other CRDs.
+* We do not support TensorBoard in the CRD, since the TensorBoard and Serving support will be in other CRDs.
 
 These three points are the biggest differences, others could be ignored or unified.
 
@@ -39,5 +44,5 @@ Feel free to hack on the controller! [docs/development.md](docs/development.md) 
 
 ## Acknowledgments
 
-- Thanks to [Kubeflow community](https://github.com/google/kubeflow) for the awesome open source project.
-- Thanks to [tensorflow/k8s][] authors for the operator.
+* Thanks to [Kubeflow community](https://github.com/google/kubeflow) for the awesome open source project.
+* Thanks to [tensorflow/k8s][] authors for the operator.

@@ -11,5 +11,4 @@ before_install:
 
 script:
   # - gometalinter --config=config.json ./...
-  # - goveralls -service=travis-ci
-  echo 'done'
+  - goveralls -service=travis-ci
