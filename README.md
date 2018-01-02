@@ -1,7 +1,7 @@
 [tensorflow/k8s]: https://github.com/tensorflow/k8s
 [caicloud/kubeflow-clientset]: https://github.com/caicloud/kubeflow-clientset
 
-# KubeFlow Controller
+# Kubeflow Controller
 
 [![Build Status](https://travis-ci.org/caicloud/kubeflow-controller.svg?branch=master)](https://travis-ci.org/caicloud/kubeflow-controller)
 [![Coverage Status](https://coveralls.io/repos/github/caicloud/kubeflow-controller/badge.svg?branch=master)](https://coveralls.io/github/caicloud/kubeflow-controller?branch=master)
