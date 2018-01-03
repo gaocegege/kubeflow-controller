@@ -517,7 +517,6 @@ func (c *Controller) updatePod(old, cur interface{}) {
 
 func (c *Controller) deletePod(obj interface{}) {
 	glog.Errorln("To Be Implemented.")
-	return
 }
 
 func (c *Controller) addService(obj interface{}) {
@@ -545,7 +544,6 @@ func (c *Controller) addService(obj interface{}) {
 		c.enqueueTFJob(tfJob)
 		return
 	}
-	return
 }
 
 func (c *Controller) updateService(old, cur interface{}) {
@@ -594,12 +592,10 @@ func (c *Controller) updateService(old, cur interface{}) {
 	// 		c.enqueueTFJob(job)
 	// 	}
 	// }
-	return
 }
 
 func (c *Controller) deleteService(obj interface{}) {
 	glog.Errorln("To Be Implemented.")
-	return
 }
 
 // resolveControllerRef returns the controller referenced by a ControllerRef,

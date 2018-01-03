@@ -9,6 +9,7 @@
     "gas",
     "lll",
     "gotype",
+    "megacheck",
     "unconvert",
     "misspell"
   ],

@@ -19,10 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	indexLabelName = "worker_index"
-)
-
 // getStatus returns no of succeeded and failed pods running a job
 func getStatus(pods []*v1.Pod) (succeeded, failed int32) {
 	succeeded = int32(filterPods(pods, v1.PodSucceeded))

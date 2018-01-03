@@ -45,7 +45,7 @@ type RealServiceControl struct {
 }
 
 func (r RealServiceControl) PatchService(namespace, name string, data []byte) error {
-	_, err := r.KubeClient.Core().Services(namespace).Patch(name, types.StrategicMergePatchType, data)
+	_, err := r.KubeClient.CoreV1().Services(namespace).Patch(name, types.StrategicMergePatchType, data)
 	return err
 }
 
@@ -64,7 +64,7 @@ func (r RealServiceControl) createServices(namespace string, service *v1.Service
 	if labels.Set(service.Labels).AsSelectorPreValidated().Empty() {
 		return fmt.Errorf("unable to create Services, no labels")
 	}
-	if newService, err := r.KubeClient.Core().Services(namespace).Create(service); err != nil {
+	if newService, err := r.KubeClient.CoreV1().Services(namespace).Create(service); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateServiceReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create services: %v", err)
 	} else {

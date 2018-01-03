@@ -18,6 +18,7 @@ import (
 
 	api "github.com/caicloud/kubeflow-clientset/apis/kubeflow/v1alpha1"
 	clientset "github.com/caicloud/kubeflow-clientset/clientset/versioned"
+	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,13 +73,14 @@ func (h *Helper) CreateService(tfJob *api.TFJob, service *v1.Service) error {
 	err := h.serviceControl.CreateServicesWithControllerRef(
 		tfJob.Namespace, service, tfJob, newControllerRef(tfJob))
 	if err != nil && errors.IsTimeout(err) {
-		// Pod is created but its initialization has timed out.
+		// Service is created but its initialization has timed out.
 		// If the initialization is successful eventually, the
 		// controller will observe the creation via the informer.
-		// If the initialization fails, or if the pod keeps
+		// If the initialization fails, or if the service keeps
 		// uninitialized for a long time, the informer will not
 		// receive any update, and the controller will create a new
-		// pod when the expectation expires.
+		// service when the expectation expires.
+		glog.V(4).Info("Service is created but its initialization has timed out.")
 	}
 	if err != nil {
 		return err
@@ -99,6 +101,7 @@ func (h *Helper) CreatePod(tfJob *api.TFJob, template *v1.PodTemplateSpec) error
 		// uninitialized for a long time, the informer will not
 		// receive any update, and the controller will create a new
 		// pod when the expectation expires.
+		glog.V(4).Info("Pod is created but its initialization has timed out.")
 	}
 	if err != nil {
 		return err
