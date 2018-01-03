@@ -51,7 +51,7 @@ The controller needs the kubeconfig or masterurl to communicate with Kubernetes 
 or
 
 ```bash
-./bin/kubeflow-controller -kubeconfig <PATH_TO_KUBECONFIG> -master string
+./bin/kubeflow-controller -master <MASTER_URL>
 ```
 
 `-logtostderr -v 4` could be added to get all the logs.
