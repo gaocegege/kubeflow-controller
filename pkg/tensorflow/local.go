@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	// ExpectedLocalWorkerNumber is the number of expected workers.
 	ExpectedLocalWorkerNumber int32 = 1
 )
 
