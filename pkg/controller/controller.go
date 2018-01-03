@@ -388,6 +388,15 @@ func (c *Controller) manageTFJob(activeWorkerPods []*v1.Pod, activePSPods []*v1.
 	events := distributedJob.Action()
 	for _, event := range events {
 		switch event.Action {
+		case tensorflow.ActionShouldDeleteAll:
+			glog.V(4).Info("Should delete all pods and services")
+			// TODO(gaocegege): Update expectations.
+			if err := c.helper.DeleteServicesForTFJob(tfJob); err != nil {
+				return 0, 0, err
+			}
+			if err := c.helper.DeletePodsForTFJob(tfJob); err != nil {
+				return 0, 0, err
+			}
 		case tensorflow.ActionShouldAddWorkerService:
 			glog.V(4).Infof("Need create %d service(s)", event.Number)
 			c.expectations.ExpectCreations(jobKey, event.Number)

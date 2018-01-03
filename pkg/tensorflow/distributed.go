@@ -56,6 +56,14 @@ func NewDistributedJob(tfJob *api.TFJob, activeWorkerPods []*v1.Pod, activePSPod
 func (dj *DistributedJob) Action() []Event {
 	events := make([]Event, 0)
 
+	if dj.tfJob.Status.Phase == api.TFJobSucceeded || dj.tfJob.Status.Phase == api.TFJobFailed {
+		events = append(events, Event{
+			Action: ActionShouldDeleteAll,
+			Number: -1,
+		})
+		return events
+	}
+
 	// Create services first.
 	expectedWorker := int(*dj.getWorkerSpec().Replicas - dj.succeededWorkerPods)
 	workerServicesCount := len(dj.workerServices)

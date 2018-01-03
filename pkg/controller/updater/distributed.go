@@ -37,9 +37,12 @@ func NewDistributed(tfJob *api.TFJob, succeededworkerPods int, workerPods []*v1.
 }
 
 // ShouldUpdate checks if the status should be updated.
-// TODO(gaocegege): Notify controller to clean.
 func (du *DistributedUpdater) ShouldUpdate() bool {
 	shouldUpdated := false
+
+	if du.tfJob.Status.Phase == api.TFJobSucceeded || du.tfJob.Status.Phase == api.TFJobFailed {
+		return true
+	}
 
 	// Get the expected number of workerPods.
 	workerPodSpec := du.tfJob.Spec.Specs[getTemplateIndex(du.tfJob, api.TFReplicaWorker)]

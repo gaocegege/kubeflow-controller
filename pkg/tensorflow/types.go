@@ -33,8 +33,8 @@ const (
 	ActionShouldAddWorker ActionType = "ShouldAddWorker"
 	// ActionShouldAddWorkerService is the action to add worker services.
 	ActionShouldAddWorkerService ActionType = "ShouldAddWorkerService"
-	// ActionShouldDelete is the action to delete something.
-	ActionShouldDelete ActionType = "ShouldDelete"
+	// ActionShouldDeleteAll is the action to delete all pods and services.
+	ActionShouldDeleteAll ActionType = "ShouldDeleteAll"
 	// ActionNothing is the action to do nothing.
 	ActionNothing ActionType = "Nothing"
 )

@@ -36,6 +36,8 @@ type ServiceControlInterface interface {
 	CreateServicesWithControllerRef(namespace string, service *v1.Service, object runtime.Object, controllerRef *metav1.OwnerReference) error
 	// PatchService patches the service.
 	PatchService(namespace, name string, data []byte) error
+	// DeleteService deletes the service.
+	DeleteService(namespace, name string) error
 }
 
 // RealServiceControl is the default implementation of ServiceControlInterface.
@@ -47,6 +49,10 @@ type RealServiceControl struct {
 func (r RealServiceControl) PatchService(namespace, name string, data []byte) error {
 	_, err := r.KubeClient.CoreV1().Services(namespace).Patch(name, types.StrategicMergePatchType, data)
 	return err
+}
+
+func (r RealServiceControl) DeleteService(namespace, name string) error {
+	return r.KubeClient.CoreV1().Services(namespace).Delete(name, nil)
 }
 
 func (r RealServiceControl) CreateServices(namespace string, service *v1.Service, object runtime.Object) error {

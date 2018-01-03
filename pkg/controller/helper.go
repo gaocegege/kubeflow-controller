@@ -45,6 +45,8 @@ type HelperInterface interface {
 	CreatePod(tfJob *api.TFJob, template *v1.PodTemplateSpec) error
 	GetPodsForTFJob(tfJob *api.TFJob, typ api.TFReplicaType) ([]*v1.Pod, error)
 	GetServicesForTFJob(tfJob *api.TFJob, typ api.TFReplicaType) ([]*v1.Service, error)
+	DeleteServicesForTFJob(tfJob *api.TFJob) error
+	DeletePodsForTFJob(tfJob *api.TFJob) error
 }
 
 // Helper is the type to manage internal resources in Kubernetes.
@@ -159,7 +161,8 @@ func (h *Helper) GetServicesForTFJob(tfJob *api.TFJob, typ api.TFReplicaType) ([
 	if err != nil {
 		return nil, fmt.Errorf("couldn't convert Job selector: %v", err)
 	}
-	// List all pods to include those that don't match the selector anymore
+
+	// List all services to include those that don't match the selector anymore
 	// but have a ControllerRef pointing to this controller.
 	services, err := h.serviceLister.Services(tfJob.Namespace).List(labels.Everything())
 	if err != nil {
@@ -179,4 +182,54 @@ func (h *Helper) GetServicesForTFJob(tfJob *api.TFJob, typ api.TFReplicaType) ([
 	})
 	cm := ref.NewServiceControllerRefManager(h.serviceControl, tfJob, selector, groupVersionKind, canAdoptFunc)
 	return cm.ClaimServices(services)
+}
+
+func (h *Helper) DeleteServicesForTFJob(tfJob *api.TFJob) error {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"kubeflow.caicloud.io": "true",
+			"runtime_id":           tfJob.Spec.RuntimeID,
+			"tf_job_name":          tfJob.Name,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("couldn't convert Job selector: %v", err)
+	}
+
+	services, err := h.serviceLister.Services(tfJob.Namespace).List(selector)
+	if err != nil {
+		return err
+	}
+
+	for _, service := range services {
+		if err := h.serviceControl.DeleteService(service.Namespace, service.Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *Helper) DeletePodsForTFJob(tfJob *api.TFJob) error {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"kubeflow.caicloud.io": "true",
+			"runtime_id":           tfJob.Spec.RuntimeID,
+			"tf_job_name":          tfJob.Name,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("couldn't convert Job selector: %v", err)
+	}
+
+	pods, err := h.podLister.Pods(tfJob.Namespace).List(selector)
+	if err != nil {
+		return err
+	}
+
+	for _, pod := range pods {
+		if err := h.podControl.DeletePod(tfJob.Namespace, pod.Name, tfJob); err != nil {
+			return err
+		}
+	}
+	return nil
 }
