@@ -6,6 +6,7 @@
     "safesql",
     "goconst",
     "goimports",
+    "golint",
     "gas",
     "lll",
     "gotype",

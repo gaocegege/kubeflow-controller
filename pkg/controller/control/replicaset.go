@@ -63,17 +63,20 @@ func (r RealReplicaSetControl) createReplicaSets(namespace string, replicaSet *a
 	if labels.Set(replicaSet.Labels).AsSelectorPreValidated().Empty() {
 		return fmt.Errorf("unable to create ReplicaSets, no labels")
 	}
-	if newReplicaSet, err := r.KubeClient.AppsV1beta2().ReplicaSets(namespace).Create(replicaSet); err != nil {
+
+	newReplicaSet, err := r.KubeClient.AppsV1beta2().ReplicaSets(namespace).Create(replicaSet)
+	if err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateReplicaSetReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create replicaSets: %v", err)
-	} else {
-		accessor, err := meta.Accessor(object)
-		if err != nil {
-			glog.Errorf("parentObject does not have ObjectMeta, %v", err)
-			return nil
-		}
-		glog.V(4).Infof("Controller %v created replicaSet %v", accessor.GetName(), newReplicaSet.Name)
-		r.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreateReplicaSetReason, "Created replicaSet: %v", newReplicaSet.Name)
 	}
+
+	accessor, err := meta.Accessor(object)
+	if err != nil {
+		glog.Errorf("parentObject does not have ObjectMeta, %v", err)
+		return nil
+	}
+	glog.V(4).Infof("Controller %v created replicaSet %v", accessor.GetName(), newReplicaSet.Name)
+	r.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreateReplicaSetReason, "Created replicaSet: %v", newReplicaSet.Name)
+
 	return nil
 }
