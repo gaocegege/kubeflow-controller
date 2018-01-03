@@ -17,8 +17,8 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	apps "k8s.io/api/apps/v1beta2"
 	"k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,9 +30,9 @@ import (
 
 type ReplicaSetControlInterface interface {
 	// CreateReplicaSets creates new replicasets according to the spec.
-	CreateReplicaSets(namespace string, replicaSet *extensions.ReplicaSet, object runtime.Object) error
+	CreateReplicaSets(namespace string, replicaSet *apps.ReplicaSet, object runtime.Object) error
 	// CreateReplicaSetsWithControllerRef creates new replicaSets according to the spec, and sets object as the replicaSet's controller.
-	CreateReplicaSetsWithControllerRef(namespace string, replicaSet *extensions.ReplicaSet, object runtime.Object, controllerRef *metav1.OwnerReference) error
+	CreateReplicaSetsWithControllerRef(namespace string, replicaSet *apps.ReplicaSet, object runtime.Object, controllerRef *metav1.OwnerReference) error
 	// PatchReplicaSet patches the replicaset.
 	PatchReplicaSet(namespace, name string, data []byte) error
 }
@@ -43,11 +43,11 @@ type RealReplicaSetControl struct {
 	Recorder   record.EventRecorder
 }
 
-func (r RealReplicaSetControl) CreateReplicaSets(namespace string, replicaSet *extensions.ReplicaSet, object runtime.Object) error {
+func (r RealReplicaSetControl) CreateReplicaSets(namespace string, replicaSet *apps.ReplicaSet, object runtime.Object) error {
 	return r.createReplicaSets(namespace, replicaSet, object, nil)
 }
 
-func (r RealReplicaSetControl) CreateReplicaSetsWithControllerRef(namespace string, replicaSet *extensions.ReplicaSet, controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
+func (r RealReplicaSetControl) CreateReplicaSetsWithControllerRef(namespace string, replicaSet *apps.ReplicaSet, controllerObject runtime.Object, controllerRef *metav1.OwnerReference) error {
 	if err := validateControllerRef(controllerRef); err != nil {
 		return err
 	}
@@ -55,15 +55,15 @@ func (r RealReplicaSetControl) CreateReplicaSetsWithControllerRef(namespace stri
 }
 
 func (r RealReplicaSetControl) PatchReplicaSet(namespace, name string, data []byte) error {
-	_, err := r.KubeClient.Extensions().ReplicaSets(namespace).Patch(name, types.StrategicMergePatchType, data)
+	_, err := r.KubeClient.AppsV1beta2().ReplicaSets(namespace).Patch(name, types.StrategicMergePatchType, data)
 	return err
 }
 
-func (r RealReplicaSetControl) createReplicaSets(namespace string, replicaSet *extensions.ReplicaSet, object runtime.Object, controllerRef *metav1.OwnerReference) error {
+func (r RealReplicaSetControl) createReplicaSets(namespace string, replicaSet *apps.ReplicaSet, object runtime.Object, controllerRef *metav1.OwnerReference) error {
 	if labels.Set(replicaSet.Labels).AsSelectorPreValidated().Empty() {
 		return fmt.Errorf("unable to create ReplicaSets, no labels")
 	}
-	if newReplicaSet, err := r.KubeClient.Extensions().ReplicaSets(namespace).Create(replicaSet); err != nil {
+	if newReplicaSet, err := r.KubeClient.AppsV1beta2().ReplicaSets(namespace).Create(replicaSet); err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateReplicaSetReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create replicaSets: %v", err)
 	} else {
