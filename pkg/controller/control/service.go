@@ -64,17 +64,20 @@ func (r RealServiceControl) createServices(namespace string, service *v1.Service
 	if labels.Set(service.Labels).AsSelectorPreValidated().Empty() {
 		return fmt.Errorf("unable to create Services, no labels")
 	}
-	if newService, err := r.KubeClient.CoreV1().Services(namespace).Create(service); err != nil {
+
+	newService, err := r.KubeClient.CoreV1().Services(namespace).Create(service)
+	if err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreateServiceReason, "Error creating: %v", err)
 		return fmt.Errorf("unable to create services: %v", err)
-	} else {
-		accessor, err := meta.Accessor(object)
-		if err != nil {
-			glog.Errorf("parentObject does not have ObjectMeta, %v", err)
-			return nil
-		}
-		glog.V(4).Infof("Controller %v created service %v", accessor.GetName(), newService.Name)
-		r.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreateServiceReason, "Created service: %v", newService.Name)
 	}
+
+	accessor, err := meta.Accessor(object)
+	if err != nil {
+		glog.Errorf("parentObject does not have ObjectMeta, %v", err)
+		return nil
+	}
+	glog.V(4).Infof("Controller %v created service %v", accessor.GetName(), newService.Name)
+	r.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreateServiceReason, "Created service: %v", newService.Name)
+
 	return nil
 }

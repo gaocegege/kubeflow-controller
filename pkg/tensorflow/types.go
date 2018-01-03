@@ -25,10 +25,16 @@ type Event struct {
 type ActionType string
 
 const (
-	ActionShouldAddPS            ActionType = "ShouldAddPS"
-	ActionShouldAddPSService     ActionType = "ShouldAddPSService"
-	ActionShouldAddWorker        ActionType = "ShouldAddWorker"
+	// ActionShouldAddPS is the action to add PS pods.
+	ActionShouldAddPS ActionType = "ShouldAddPS"
+	// ActionShouldAddPSService is the action to add PS services.
+	ActionShouldAddPSService ActionType = "ShouldAddPSService"
+	// ActionShouldAddWorker is the action to add worker pods.
+	ActionShouldAddWorker ActionType = "ShouldAddWorker"
+	// ActionShouldAddWorkerService is the action to add worker services.
 	ActionShouldAddWorkerService ActionType = "ShouldAddWorkerService"
-	ActionShouldDelete           ActionType = "ShouldDelete"
-	ActionNothing                ActionType = "Nothing"
+	// ActionShouldDelete is the action to delete something.
+	ActionShouldDelete ActionType = "ShouldDelete"
+	// ActionNothing is the action to do nothing.
+	ActionNothing ActionType = "Nothing"
 )
