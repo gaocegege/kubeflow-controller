@@ -8,6 +8,7 @@
     "goimports",
     "gas",
     "lll",
+    "gotype",
     "unconvert",
     "misspell"
   ],
