@@ -16,8 +16,18 @@
 [[projects]]
   branch = "master"
   name = "github.com/caicloud/kubeflow-clientset"
-  packages = ["apis/kubeflow/v1alpha1","clientset/versioned","clientset/versioned/scheme","clientset/versioned/typed/kubeflow/v1alpha1","informers/externalversions","informers/externalversions/internalinterfaces","informers/externalversions/kubeflow","informers/externalversions/kubeflow/v1alpha1","listers/kubeflow/v1alpha1"]
-  revision = "84f1d0a84981c7286327d334e0d70822e789073d"
+  packages = [
+    "apis/kubeflow/v1alpha1",
+    "clientset/versioned",
+    "clientset/versioned/scheme",
+    "clientset/versioned/typed/kubeflow/v1alpha1",
+    "informers/externalversions",
+    "informers/externalversions/internalinterfaces",
+    "informers/externalversions/kubeflow",
+    "informers/externalversions/kubeflow/v1alpha1",
+    "listers/kubeflow/v1alpha1"
+  ]
+  revision = "d5d1d0c2371d56994a552055e0cd0c72079cdd4a"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -279,6 +289,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e70e215cb9ebf590379927dbe0f6b71194f9d1966f379011fe7944025b7455d2"
+  inputs-digest = "b3783ef6cd2d1695e8fb0bb38ffd0daec39b77352c36b05a8a4c1de6fedc66fb"
   solver-name = "gps-cdcl"
   solver-version = 1

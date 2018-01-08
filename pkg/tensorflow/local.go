@@ -1,9 +1,12 @@
 /*
-Copyright 2018 Caicloud Authors
+Copyright 2018 Caicloud Inc. All Rights Reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -77,14 +80,14 @@ func (lj *LocalJob) Action() Event {
 // Notice: DO NOT call it multiple times for a tfjob since its runtime ID will be changed.
 func (lj *LocalJob) compose() {
 	lj.tfJob.Spec.RuntimeID = generateRuntimeID()
-	lj.tfJob.Spec.Specs[0].Template.Labels = lj.labels()
+	lj.tfJob.Spec.TFReplicaSpecs[0].Template.Labels = lj.labels()
 }
 
 // labels returns the labels for this replica set.
 func (lj LocalJob) labels() map[string]string {
 	return map[string]string{
 		"kubeflow.caicloud.io": "true",
-		"job_type":             string(*lj.tfJob.Spec.Specs[0].TFReplicaType),
+		"job_type":             string(*lj.tfJob.Spec.TFReplicaSpecs[0].TFReplicaType),
 		"runtime_id":           lj.tfJob.Spec.RuntimeID,
 		"tf_job_name":          lj.tfJob.Name,
 	}

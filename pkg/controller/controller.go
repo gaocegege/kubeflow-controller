@@ -1,9 +1,12 @@
 /*
-Copyright 2018 Caicloud Authors
+Copyright 2018 Caicloud Inc. All Rights Reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -368,7 +371,7 @@ func (c *Controller) manageTFJob(activeWorkerPods []*v1.Pod, activePSPods []*v1.
 		case tensorflow.ActionShouldAddWorker:
 			glog.V(4).Infof("Expect to create %d pod", event.Number)
 			c.expectations.ExpectCreations(jobKey, event.Number)
-			if err := c.helper.CreatePod(tfJob, tfJob.Spec.Specs[0].Template); err != nil {
+			if err := c.helper.CreatePod(tfJob, tfJob.Spec.TFReplicaSpecs[0].Template); err != nil {
 				defer runtime.HandleError(err)
 				glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
 				c.expectations.CreationObserved(jobKey)

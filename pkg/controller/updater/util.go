@@ -1,9 +1,12 @@
 /*
-Copyright 2018 Caicloud Authors
+Copyright 2018 Caicloud Inc. All Rights Reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,9 +62,9 @@ func updateTFReplicaStatuses(tfJob *api.TFJob, pods []*v1.Pod, typ api.TFReplica
 
 // dup with github.com/caicloud/kubeflow-controller/pkg/tensorflow/distributed.go
 func getTemplateIndex(tfJob *api.TFJob, typ api.TFReplicaType) int {
-	if *tfJob.Spec.Specs[0].TFReplicaType == typ {
+	if *tfJob.Spec.TFReplicaSpecs[0].TFReplicaType == typ {
 		return 0
-	} else if *tfJob.Spec.Specs[1].TFReplicaType == typ {
+	} else if *tfJob.Spec.TFReplicaSpecs[1].TFReplicaType == typ {
 		return 1
 	}
 	glog.V(4).Infoln("%s Spec is not in spec[0] or spec[1]", string(typ))

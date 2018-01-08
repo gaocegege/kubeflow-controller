@@ -2,7 +2,7 @@
 
 ### Build and run the controller
 
-Before the creation of training jobs, we have to build and run the controller first. See [development.md](developmet.md) to create a Kubernetes single-node cluster and run the Kubeflow controller based on that cluster.
+Before the creation of training jobs, we have to build and run the controller first. See [development.md](development.md) to create a Kubernetes single-node cluster and run the Kubeflow controller based on that cluster.
 
 ### Create a local training job
 

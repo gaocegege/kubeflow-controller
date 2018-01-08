@@ -7,10 +7,6 @@
   name = "github.com/caicloud/kubeflow-clientset"
 
 [[constraint]]
-  name = "github.com/coreos/etcd"
-  version = "3.2.11"
-
-[[constraint]]
   branch = "master"
   name = "github.com/golang/glog"
 
