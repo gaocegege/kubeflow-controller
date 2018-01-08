@@ -62,9 +62,9 @@ func updateTFReplicaStatuses(tfJob *api.TFJob, pods []*v1.Pod, typ api.TFReplica
 
 // dup with github.com/caicloud/kubeflow-controller/pkg/tensorflow/distributed.go
 func getTemplateIndex(tfJob *api.TFJob, typ api.TFReplicaType) int {
-	if *tfJob.Spec.Specs[0].TFReplicaType == typ {
+	if *tfJob.Spec.TFReplicaSpecs[0].TFReplicaType == typ {
 		return 0
-	} else if *tfJob.Spec.Specs[1].TFReplicaType == typ {
+	} else if *tfJob.Spec.TFReplicaSpecs[1].TFReplicaType == typ {
 		return 1
 	}
 	glog.V(4).Infoln("%s Spec is not in spec[0] or spec[1]", string(typ))

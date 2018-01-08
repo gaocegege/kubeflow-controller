@@ -26,7 +26,7 @@ import (
 func TestIsLocalJob(t *testing.T) {
 	testCase := &api.TFJob{
 		Spec: api.TFJobSpec{
-			Specs: []api.TFReplicaSpec{
+			TFReplicaSpecs: []api.TFReplicaSpec{
 				api.TFReplicaSpec{},
 				api.TFReplicaSpec{},
 			},
@@ -44,9 +44,9 @@ func TestIsLocalJob(t *testing.T) {
 	}
 
 	for index, testType := range testTypes {
-		testCase.Spec.Specs[0].TFReplicaType = &testType
+		testCase.Spec.TFReplicaSpecs[0].TFReplicaType = &testType
 		for _, nestedTestType := range testTypes {
-			testCase.Spec.Specs[1].TFReplicaType = &nestedTestType
+			testCase.Spec.TFReplicaSpecs[1].TFReplicaType = &nestedTestType
 			isLocalJob := IsLocalJob(testCase)
 			assert.Equal(t, testResults[index], isLocalJob, "expected IsLocalJob to be `%t` but got `%t`", testResults[index], isLocalJob)
 		}

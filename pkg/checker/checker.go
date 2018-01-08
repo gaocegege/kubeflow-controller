@@ -23,5 +23,5 @@ import (
 // IsLocalJob checks if the job is a local job.
 func IsLocalJob(tfJob *api.TFJob) bool {
 	// Local job should have only one replica, and its type should be local.
-	return *tfJob.Spec.Specs[0].TFReplicaType == api.TFReplicaLocal
+	return *tfJob.Spec.TFReplicaSpecs[0].TFReplicaType == api.TFReplicaLocal
 }

@@ -371,7 +371,7 @@ func (c *Controller) manageTFJob(activeWorkerPods []*v1.Pod, activePSPods []*v1.
 		case tensorflow.ActionShouldAddWorker:
 			glog.V(4).Infof("Expect to create %d pod", event.Number)
 			c.expectations.ExpectCreations(jobKey, event.Number)
-			if err := c.helper.CreatePod(tfJob, tfJob.Spec.Specs[0].Template); err != nil {
+			if err := c.helper.CreatePod(tfJob, tfJob.Spec.TFReplicaSpecs[0].Template); err != nil {
 				defer runtime.HandleError(err)
 				glog.V(2).Infof("Failed creation, decrementing expectations for TFJob %q/%q", tfJob.Namespace, tfJob.Name)
 				c.expectations.CreationObserved(jobKey)

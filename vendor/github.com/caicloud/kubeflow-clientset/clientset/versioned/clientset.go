@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Caicloud KubeFlow Authors.
+Copyright 2017 Caicloud Inc. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,7 +12,8 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/package versioned
+*/
+package versioned
 
 import (
 	kubeflowv1alpha1 "github.com/caicloud/kubeflow-clientset/clientset/versioned/typed/kubeflow/v1alpha1"

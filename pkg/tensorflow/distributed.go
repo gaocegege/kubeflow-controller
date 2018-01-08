@@ -118,13 +118,13 @@ func (dj *DistributedJob) Action() []Event {
 
 // GetSpec gets the spec with index.
 func (dj *DistributedJob) GetSpec(typ api.TFReplicaType, index int) *api.TFReplicaSpec {
-	template := dj.tfJob.Spec.Specs[dj.getTemplateIndex(typ)].Template
+	template := dj.tfJob.Spec.TFReplicaSpecs[dj.getTemplateIndex(typ)].Template
 
 	// TODO(gaocegege): We need deepcopy
 	template.Labels["index"] = fmt.Sprintf("%d", index)
 	template.Spec.Containers[0].Args = dj.generateTFClusterSpec(typ, index)
 
-	return &dj.tfJob.Spec.Specs[dj.getTemplateIndex(typ)]
+	return &dj.tfJob.Spec.TFReplicaSpecs[dj.getTemplateIndex(typ)]
 }
 
 func (dj *DistributedJob) generateTFClusterSpec(typ api.TFReplicaType, index int) []string {
@@ -191,17 +191,17 @@ func (dj *DistributedJob) GetService(typ api.TFReplicaType, index int) *v1.Servi
 }
 
 func (dj *DistributedJob) getPSSpec() *api.TFReplicaSpec {
-	return &dj.tfJob.Spec.Specs[dj.getTemplateIndex(api.TFReplicaPS)]
+	return &dj.tfJob.Spec.TFReplicaSpecs[dj.getTemplateIndex(api.TFReplicaPS)]
 }
 
 func (dj *DistributedJob) getWorkerSpec() *api.TFReplicaSpec {
-	return &dj.tfJob.Spec.Specs[dj.getTemplateIndex(api.TFReplicaWorker)]
+	return &dj.tfJob.Spec.TFReplicaSpecs[dj.getTemplateIndex(api.TFReplicaWorker)]
 }
 
 func (dj DistributedJob) getTemplateIndex(typ api.TFReplicaType) int {
-	if *dj.tfJob.Spec.Specs[0].TFReplicaType == typ {
+	if *dj.tfJob.Spec.TFReplicaSpecs[0].TFReplicaType == typ {
 		return 0
-	} else if *dj.tfJob.Spec.Specs[1].TFReplicaType == typ {
+	} else if *dj.tfJob.Spec.TFReplicaSpecs[1].TFReplicaType == typ {
 		return 1
 	}
 	glog.V(4).Infoln("%s Spec is not in spec[0] or spec[1]", string(typ))

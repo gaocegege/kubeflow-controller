@@ -45,7 +45,7 @@ func (du *DistributedUpdater) ShouldUpdate() bool {
 	shouldUpdated := false
 
 	// Get the expected number of workerPods.
-	workerPodSpec := du.tfJob.Spec.Specs[getTemplateIndex(du.tfJob, api.TFReplicaWorker)]
+	workerPodSpec := du.tfJob.Spec.TFReplicaSpecs[getTemplateIndex(du.tfJob, api.TFReplicaWorker)]
 	expected := int(*workerPodSpec.Replicas)
 
 	if du.succeededworkerPods == expected {

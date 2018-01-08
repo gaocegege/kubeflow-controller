@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package scheme
+package fake
 
 import (
 	kubeflowv1alpha1 "github.com/caicloud/kubeflow-clientset/apis/kubeflow/v1alpha1"
@@ -23,13 +23,13 @@ import (
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-var Scheme = runtime.NewScheme()
-var Codecs = serializer.NewCodecFactory(Scheme)
-var ParameterCodec = runtime.NewParameterCodec(Scheme)
+var scheme = runtime.NewScheme()
+var codecs = serializer.NewCodecFactory(scheme)
+var parameterCodec = runtime.NewParameterCodec(scheme)
 
 func init() {
-	v1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
-	AddToScheme(Scheme)
+	v1.AddToGroupVersion(scheme, schema.GroupVersion{Version: "v1"})
+	AddToScheme(scheme)
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

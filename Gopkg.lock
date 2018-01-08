@@ -16,8 +16,18 @@
 [[projects]]
   branch = "master"
   name = "github.com/caicloud/kubeflow-clientset"
-  packages = ["apis/kubeflow/v1alpha1","clientset/versioned","clientset/versioned/scheme","clientset/versioned/typed/kubeflow/v1alpha1","informers/externalversions","informers/externalversions/internalinterfaces","informers/externalversions/kubeflow","informers/externalversions/kubeflow/v1alpha1","listers/kubeflow/v1alpha1"]
-  revision = "84f1d0a84981c7286327d334e0d70822e789073d"
+  packages = [
+    "apis/kubeflow/v1alpha1",
+    "clientset/versioned",
+    "clientset/versioned/scheme",
+    "clientset/versioned/typed/kubeflow/v1alpha1",
+    "informers/externalversions",
+    "informers/externalversions/internalinterfaces",
+    "informers/externalversions/kubeflow",
+    "informers/externalversions/kubeflow/v1alpha1",
+    "listers/kubeflow/v1alpha1"
+  ]
+  revision = "d5d1d0c2371d56994a552055e0cd0c72079cdd4a"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"

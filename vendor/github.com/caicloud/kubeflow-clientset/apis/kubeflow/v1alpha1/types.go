@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Caicloud KubeFlow Authors.
+Copyright 2017 Caicloud Inc. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ type TFJobSpec struct {
 	ExportDir string `json:"exportDir,omitempty"`
 	// An array of working TFReplicas for this TFJob.
 	// If empty then this resource can't be scheduled
-	Specs []TFReplicaSpec `json:"tfReplicaSpec"`
+	TFReplicaSpecs []TFReplicaSpec `json:"tfReplicaSpec"`
 }
 
 // TFReplicaSpec is the spec for a TFReplica resource
@@ -132,18 +132,23 @@ const (
 	TFJobFailed TFJobPhase = "Failed"
 )
 
-// TFJobCondition is the type for condition, which is used in TFJobStatus.
+// TFJobCondition describes the state of a TFJob at a certain point.
 type TFJobCondition struct {
-	Type               TFJobConditionType `json:"type"`
-	Status             ConditionStatus    `json:"status"`
-	Reason             string             `json:"reason"`
-	LastTransitionTime metav1.Time        `json:"lastTransitionTime,omitempty"`
+    // Type of TFJob condition.
+    Type TFJobConditionType `json:"type"`
+    // Status of the condition, one of True, False, Unknown.
+    Status v1.ConditionStatus `json:"status"`
+    // The reason for the condition's last transition.
+    Reason string `json:"reason,omitempty"`
+    // A human readable message indicating details about the transition.
+    Message string `json:"message,omitempty"`
+    // The last time this condition was updated.
+    LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+    // Last time the condition transitioned from one status to another.
+    LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-// ConditionStatus is the type for condition status.
-type ConditionStatus string
-
-// TFJobConditionType define all kinds of types of TFJobStatus
+// TFJobConditionType defines all kinds of types of TFJobStatus.
 type TFJobConditionType string
 
 const (
@@ -157,8 +162,10 @@ const (
 
 type TFReplicaStatus struct {
 	Type *TFReplicaType `json:"type"`
-	// State is the overall state of the TFReplica
+	// State is the overall state of the TFReplica.
 	State TFReplicaState `json:"state"`
+	// PodNames is the name of all pods.
+	PodNames []string `json:"podNames"`
 	// ReplicasStates provides the number of TFReplicas in each status.
 	TFReplicasStates map[TFReplicaState]int `json:"tfReplicasStates,omitempty"`
 }
